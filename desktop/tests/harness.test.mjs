@@ -91,6 +91,7 @@ test('resolveHarnessLaunch falls back to apps/cli source with a real Node', () =
   const launch = resolveHarnessLaunch({
     env: { PATH: '', TINYWHALE_NODE_EXECUTABLE: nodePath },
     repoRoot: dir,
+    home: dir,
   })
   assert.equal(launch.command, nodePath)
   assert.deepEqual(launch.args, ['--import', 'tsx/esm', sourceBin])

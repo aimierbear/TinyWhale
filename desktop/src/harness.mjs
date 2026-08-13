@@ -3,8 +3,10 @@
  */
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { envWithGuiPath, knownDshBin } from './gui-path.mjs'
 import { resolveNodeExecutable } from './resolve-node.mjs'
 
 const desktopRoot = dirname(fileURLToPath(new URL('.', import.meta.url)))
@@ -78,7 +80,8 @@ export function findOnPath(name, env = process.env) {
  * @returns {{ command: string, args: string[], cwd: string }}
  */
 export function resolveHarnessLaunch(options = {}) {
-  const env = options.env ?? process.env
+  const home = options.home ?? homedir()
+  const env = envWithGuiPath(options.env ?? process.env, home)
   const root = options.repoRoot ?? repoRoot
   const explicit = env.TINYWHALE_DSH_BIN
   if (explicit) {
@@ -88,6 +91,11 @@ export function resolveHarnessLaunch(options = {}) {
   const onPath = findOnPath('dsh', env)
   if (onPath) {
     return { command: onPath, args: [], cwd: root }
+  }
+
+  const known = knownDshBin(home)
+  if (known) {
+    return { command: known, args: [], cwd: root }
   }
 
   const sourceBin = join(root, 'apps/cli/src/bin.ts')
@@ -127,7 +135,7 @@ export function stopHarness(child) {
  * }} [options]
  */
 export async function attachOrStartHarness(options = {}) {
-  const env = options.env ?? process.env
+  const env = envWithGuiPath(options.env ?? process.env)
   const port = Number(env.TINYWHALE_PORT ?? options.port ?? DEFAULT_PORT)
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error(`Invalid TinyWhale port: ${String(env.TINYWHALE_PORT ?? options.port)}`)
@@ -141,7 +149,7 @@ export async function attachOrStartHarness(options = {}) {
     throw new Error(`Nothing is serving ${url}, and attach-only mode will not start dsh.`)
   }
 
-  const launch = resolveHarnessLaunch({ env, repoRoot: options.repoRoot })
+  const launch = resolveHarnessLaunch({ env, repoRoot: options.repoRoot, home: options.home })
   const child = spawn(launch.command, [...launch.args, 'web', '--port', String(port)], {
     cwd: launch.cwd,
     env: { ...env },

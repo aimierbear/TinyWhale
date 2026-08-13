@@ -5,10 +5,16 @@ Electron shell around the local harness Web UI. This directory is **not** a pnpm
 ```
 desktop/
   src/main.mjs           Electron main process
+  src/menu.mjs           TinyWhale application menu
   src/harness.mjs        Attach to or spawn `dsh web`
+  src/gui-path.mjs       Finder-safe PATH for Node / dsh
   src/resolve-node.mjs   Find a real Node binary (never Electron's execPath)
+  src/loading.html       Startup screen
+  resources/icon-master.jpg  App icon artwork
+  resources/icon.png         1024px icon
+  resources/icon.icns        macOS icon
   tests/                 node:test unit tests
-  electron-builder.yml   macOS / Windows / Linux packager config
+  electron-builder.yml   macOS packager config
 ```
 
 ## Run
@@ -28,9 +34,11 @@ npm start
 ```sh
 npm test              # unit tests, no Electron window
 npm run smoke         # attach to an already-running Web UI and quit
-npm run pack          # unpacked electron-builder directory
-npm run dist          # DMG / zip (macOS)
+npm run icon          # rebuild resources/icon.png and icon.icns from the SVG
+npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
 ```
+
+The packaged app is a local unsigned build. Open `release/mac-arm64/TinyWhale.app`, or copy it to `~/Applications`. It is not notarized.
 
 ## Environment
 

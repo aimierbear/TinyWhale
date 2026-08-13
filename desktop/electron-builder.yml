@@ -6,20 +6,30 @@ directories:
   buildResources: resources
 files:
   - src/**/*
+  - resources/icon.png
   - package.json
 extraMetadata:
   main: src/main.mjs
 mac:
   category: public.app-category.developer-tools
-  target:
-    - dmg
-    - zip
-  hardenedRuntime: true
+  icon: resources/icon.png
+  identity: null
+  hardenedRuntime: false
   gatekeeperAssess: false
+  target:
+    - target: dir
+      arch:
+        - arm64
+  extendInfo:
+    CFBundleDisplayName: TinyWhale
+    CFBundleName: TinyWhale
+    CFBundleSpokenName: Tiny Whale
 linux:
   target:
-    - AppImage
+    - dir
   category: Development
+  icon: resources/icon.png
 win:
   target:
-    - nsis
+    - dir
+  icon: resources/icon.png
