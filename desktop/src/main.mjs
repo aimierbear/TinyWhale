@@ -39,7 +39,7 @@ function createWindow() {
     minHeight: 600,
     show: !SMOKE,
     title: 'TinyWhale',
-    backgroundColor: '#15515C',
+    backgroundColor: '#0E2A40',
     autoHideMenuBar: true,
     webPreferences: {
       partition: 'persist:tinywhale',
