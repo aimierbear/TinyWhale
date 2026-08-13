@@ -8,20 +8,7 @@ icns="$root/resources/icon.icns"
 setdir="$root/resources/TinyWhale.iconset"
 
 if [[ -f "$master" ]]; then
-  python3 - "$master" "$png" <<'PY'
-import sys
-from PIL import Image
-src, dest = sys.argv[1], sys.argv[2]
-im = Image.open(src).convert("RGB").resize((1024, 1024), Image.Resampling.LANCZOS)
-px = im.load()
-teal = (21, 81, 92)
-for y in range(im.height):
-    for x in range(im.width):
-        r, g, b = px[x, y]
-        if r > 245 and g > 245 and b > 245:
-            px[x, y] = teal
-im.save(dest, "PNG")
-PY
+  python3 "$root/scripts/compose-icon.py" "$master" "$png"
 else
   rsvg-convert -w 1024 -h 1024 "$svg" > "$png"
 fi

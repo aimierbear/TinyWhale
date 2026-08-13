@@ -12,7 +12,7 @@ extraMetadata:
   main: src/main.mjs
 mac:
   category: public.app-category.developer-tools
-  icon: resources/icon.png
+  icon: resources/icon.icns
   identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
