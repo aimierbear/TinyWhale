@@ -65,6 +65,8 @@ describe('web e2e: settings modal and General preferences', () => {
     await expect.poll(() => dialog.getByText('外观', { exact: true }).count(), { timeout: 5_000 }).toBe(1)
     const openDocument = dialog.getByRole('button', { name: '打开配置文件' })
     await openDocument.waitFor({ timeout: 10_000 })
+    await dialog.getByRole('button', { name: '更新' }).waitFor({ timeout: 10_000 })
+    await dialog.getByText('从上游仓库拉取最新代码。完成后请重启 TinyWhale。').waitFor({ timeout: 10_000 })
     let openRequests = 0
     await page.route('**/api/settings.openDocument', async (route) => {
       const envelope = route.request().postDataJSON() as {

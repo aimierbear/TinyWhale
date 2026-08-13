@@ -11,6 +11,10 @@ TinyWhale is the public product name of this repository. It is a fork of [DeepSe
 
 ## Syncing upstream
 
+Loopback Settings → General → **软件更新** / **Software update** runs the same fetch-and-merge on the checkout that contains this file. The button refuses a dirty or detached tree, aborts on conflict, and installs from `pnpm-lock.yaml` when that file changed. Restart TinyWhale afterward; the running `dsh web` process does not reload itself. Electron shows the same row because it loads the Web Settings UI. The Dock/dev app (`desktop` `npm run pack && npm run install:dev`) stamps this checkout into `Contents/Resources/tinywhale-checkout.json` and starts `apps/cli/src/bin.ts` unless `/tinywhale/status` is already answering; `pnpm build` must have produced host `lib/` and the web frontend, or that spawn exits before the UI is ready.
+
+From a terminal:
+
 ```sh
 git remote add upstream https://github.com/deepseek-ai/deepseek-harness.git
 git fetch upstream

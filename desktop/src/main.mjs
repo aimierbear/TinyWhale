@@ -82,6 +82,17 @@ function focusWindow(window) {
   window.focus()
 }
 
+function startupHint(message) {
+  if (
+    message.includes('typert.host.js')
+    || message.includes('plugin tree failed to load')
+    || message.includes('loader fibers failed')
+  ) {
+    return '本仓库还没有编译产物。在 TinyWhale 仓库根目录运行 pnpm build，然后重新打开应用。'
+  }
+  return '需要本机已安装 dsh，或先在仓库根目录编译后打开 TinyWhale。'
+}
+
 async function showStartupFailure(error) {
   const message = error instanceof Error ? error.message : String(error)
   if (SMOKE) {
@@ -93,7 +104,7 @@ async function showStartupFailure(error) {
     type: 'error',
     title: 'TinyWhale',
     message: '无法启动 TinyWhale',
-    detail: `${message}\n\n需要本机已安装 dsh，或先在终端运行 dsh web。`,
+    detail: `${message}\n\n${startupHint(message)}`,
   })
 }
 

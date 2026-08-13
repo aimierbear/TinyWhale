@@ -8,7 +8,10 @@ import {
   findOnPath,
   harnessUrl,
   isHttpReady,
+  isTinyWhaleCheckout,
+  isTinyWhaleUpdateReady,
   resolveHarnessLaunch,
+  resolveRepoRoot,
   waitForHttp,
 } from '../src/harness.mjs'
 
@@ -69,6 +72,34 @@ test('findOnPath locates the current node binary directory', () => {
   assert.match(found, /node(\.exe)?$/)
 })
 
+test('resolveRepoRoot honors TINYWHALE_REPO when it is a checkout', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tinywhale-repo-'))
+  writeFileSync(join(dir, 'TINYWHALE.md'), '# TinyWhale\n')
+  const sourceBin = join(dir, 'apps/cli/src/bin.ts')
+  mkdirSync(dirname(sourceBin), { recursive: true })
+  writeFileSync(sourceBin, '')
+  assert.equal(resolveRepoRoot({ env: { TINYWHALE_REPO: dir } }), dir)
+  assert.notEqual(resolveRepoRoot({ env: { TINYWHALE_REPO: tmpdir() } }), tmpdir())
+})
+
+test('resolveRepoRoot reads a tinywhale-checkout stamp from process.resourcesPath', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tinywhale-stamp-'))
+  writeFileSync(join(dir, 'TINYWHALE.md'), '# TinyWhale\n')
+  const sourceBin = join(dir, 'apps/cli/src/bin.ts')
+  mkdirSync(dirname(sourceBin), { recursive: true })
+  writeFileSync(sourceBin, '')
+  const resources = mkdtempSync(join(tmpdir(), 'tinywhale-res-'))
+  writeFileSync(join(resources, 'tinywhale-checkout.json'), `${JSON.stringify({ repoRoot: dir })}\n`)
+  const previous = process.resourcesPath
+  process.resourcesPath = resources
+  try {
+    assert.equal(resolveRepoRoot({ env: {} }), dir)
+  } finally {
+    if (previous === undefined) delete process.resourcesPath
+    else process.resourcesPath = previous
+  }
+})
+
 test('resolveHarnessLaunch uses TINYWHALE_DSH_BIN first', () => {
   const dir = mkdtempSync(join(tmpdir(), 'tinywhale-dsh-'))
   const bin = join(dir, 'dsh')
@@ -79,6 +110,64 @@ test('resolveHarnessLaunch uses TINYWHALE_DSH_BIN first', () => {
   })
   assert.equal(launch.command, bin)
   assert.deepEqual(launch.args, [])
+})
+
+test('resolveHarnessLaunch prefers checkout source over PATH dsh', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tinywhale-prefer-'))
+  writeFileSync(join(dir, 'TINYWHALE.md'), '# TinyWhale\n')
+  const sourceBin = join(dir, 'apps/cli/src/bin.ts')
+  mkdirSync(dirname(sourceBin), { recursive: true })
+  writeFileSync(sourceBin, '')
+  const pathDir = mkdtempSync(join(tmpdir(), 'tinywhale-path-'))
+  const pathDsh = join(pathDir, 'dsh')
+  writeFileSync(pathDsh, '')
+  const nodePath = join(dir, 'node')
+  writeFileSync(nodePath, '')
+  const launch = resolveHarnessLaunch({
+    env: { PATH: pathDir, TINYWHALE_NODE_EXECUTABLE: nodePath },
+    repoRoot: dir,
+    home: dir,
+  })
+  assert.equal(launch.command, nodePath)
+  assert.deepEqual(launch.args, ['--import', 'tsx/esm', sourceBin])
+})
+
+test('isTinyWhaleCheckout requires the marker and source CLI', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tinywhale-marker-'))
+  assert.equal(isTinyWhaleCheckout(dir), false)
+  writeFileSync(join(dir, 'TINYWHALE.md'), '# TinyWhale\n')
+  assert.equal(isTinyWhaleCheckout(dir), false)
+  const sourceBin = join(dir, 'apps/cli/src/bin.ts')
+  mkdirSync(dirname(sourceBin), { recursive: true })
+  writeFileSync(sourceBin, '')
+  assert.equal(isTinyWhaleCheckout(dir), true)
+})
+
+test('isTinyWhaleUpdateReady is true only for the TinyWhale status channel', async () => {
+  const ready = await listen((request, response) => {
+    if (request.method === 'POST' && request.url === '/tinywhale/status') {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({
+        type: 'server-response',
+        rpcId: 'tinywhale-probe',
+        result: { ok: true, value: { available: true } },
+      }))
+      return
+    }
+    response.writeHead(404)
+    response.end()
+  })
+  const missing = await listen((_request, response) => {
+    response.writeHead(404)
+    response.end()
+  })
+  try {
+    assert.equal(await isTinyWhaleUpdateReady(ready.url), true)
+    assert.equal(await isTinyWhaleUpdateReady(missing.url), false)
+  } finally {
+    ready.server.close()
+    missing.server.close()
+  }
 })
 
 test('resolveHarnessLaunch falls back to apps/cli source with a real Node', () => {

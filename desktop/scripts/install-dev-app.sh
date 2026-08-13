@@ -13,6 +13,7 @@ fi
 mkdir -p "$HOME/Applications"
 rm -rf "$dest"
 cp -R "$src" "$dest"
+node "$root/scripts/write-checkout-root.mjs" "$dest/Contents/Resources/tinywhale-checkout.json"
 codesign --force --deep --sign - "$dest" >/dev/null
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$dest"
 echo "installed $dest"

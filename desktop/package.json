@@ -13,7 +13,7 @@
     "smoke": "electron . --smoke",
     "test": "node --test tests/*.test.mjs",
     "icon": "bash scripts/make-icon.sh",
-    "pack": "electron-builder --mac dir",
+    "pack": "electron-builder --mac dir && node scripts/write-checkout-root.mjs release/mac-arm64/TinyWhale.app/Contents/Resources/tinywhale-checkout.json",
     "install:dev": "bash scripts/install-dev-app.sh",
     "dist": "electron-builder --mac dir"
   },

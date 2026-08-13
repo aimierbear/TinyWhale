@@ -2,7 +2,7 @@
  * Locate and start the local harness Web UI, or attach when it is already up.
  */
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,6 +10,59 @@ import { envWithGuiPath, knownDshBin } from './gui-path.mjs'
 import { resolveNodeExecutable } from './resolve-node.mjs'
 
 const desktopRoot = dirname(fileURLToPath(new URL('.', import.meta.url)))
+
+/**
+ * @param {string} root
+ */
+export function isTinyWhaleCheckout(root) {
+  return existsSync(join(root, 'TINYWHALE.md')) && existsSync(join(root, 'apps/cli/src/bin.ts'))
+}
+
+/**
+ * @param {string} file
+ * @returns {string | undefined}
+ */
+function repoRootFromStamp(file) {
+  if (!existsSync(file)) return undefined
+  try {
+    const data = JSON.parse(readFileSync(file, 'utf8'))
+    if (typeof data.repoRoot === 'string' && isTinyWhaleCheckout(data.repoRoot)) {
+      return data.repoRoot
+    }
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
+/**
+ * Resolve the TinyWhale git checkout. A packed .app does not live inside the
+ * monorepo, so install:dev stamps `tinywhale-checkout.json` into Resources.
+ * @param {{ env?: NodeJS.ProcessEnv, repoRoot?: string }} [options]
+ */
+export function resolveRepoRoot(options = {}) {
+  if (options.repoRoot !== undefined) return options.repoRoot
+  const env = options.env ?? process.env
+  const fromEnv = env.TINYWHALE_REPO
+  if (typeof fromEnv === 'string' && fromEnv !== '' && isTinyWhaleCheckout(fromEnv)) {
+    return fromEnv
+  }
+  const resources = typeof process.resourcesPath === 'string' && process.resourcesPath !== ''
+    ? process.resourcesPath
+    : undefined
+  const stampCandidates = [
+    resources === undefined ? undefined : join(resources, 'tinywhale-checkout.json'),
+    join(dirname(desktopRoot), 'tinywhale-checkout.json'),
+    join(desktopRoot, 'tinywhale-checkout.json'),
+  ]
+  for (const file of stampCandidates) {
+    if (file === undefined) continue
+    const recorded = repoRootFromStamp(file)
+    if (recorded !== undefined) return recorded
+  }
+  return dirname(desktopRoot)
+}
+
 export const repoRoot = dirname(desktopRoot)
 
 export const DEFAULT_PORT = 3080
@@ -34,6 +87,44 @@ export async function isHttpReady(url, timeoutMs = 800) {
   } catch {
     return false
   }
+}
+
+/**
+ * True when this origin serves the TinyWhale update channel.
+ * A published DeepSeek `dsh web` on the same port returns 404.
+ * @param {string} url
+ * @param {number} [timeoutMs]
+ */
+export async function isTinyWhaleUpdateReady(url, timeoutMs = 800) {
+  try {
+    const response = await fetch(new URL('/tinywhale/status', url), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        type: 'client-request',
+        rpcId: 'tinywhale-probe',
+        method: 'status',
+        payload: {},
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    if (!response.ok) return false
+    const body = await response.json()
+    return body?.result?.ok === true && typeof body?.result?.value?.available === 'boolean'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * @param {string} host
+ * @param {number} start
+ */
+export async function findFreeHarnessPort(host, start) {
+  for (let port = start; port < start + 20; port++) {
+    if (!await isHttpReady(harnessUrl(port, host), 200)) return port
+  }
+  throw new Error(`No free TinyWhale port after ${String(start)}`)
 }
 
 /**
@@ -76,16 +167,28 @@ export function findOnPath(name, env = process.env) {
 }
 
 /**
- * @param {{ env?: NodeJS.ProcessEnv, repoRoot?: string }} [options]
+ * @param {{ env?: NodeJS.ProcessEnv, repoRoot?: string, home?: string }} [options]
  * @returns {{ command: string, args: string[], cwd: string }}
  */
 export function resolveHarnessLaunch(options = {}) {
   const home = options.home ?? homedir()
   const env = envWithGuiPath(options.env ?? process.env, home)
-  const root = options.repoRoot ?? repoRoot
+  const root = options.repoRoot ?? resolveRepoRoot({ env })
   const explicit = env.TINYWHALE_DSH_BIN
   if (explicit) {
     return { command: explicit, args: [], cwd: root }
+  }
+
+  // A published `dsh` on PATH is DeepSeek Harness, not this checkout.
+  // Prefer the source CLI so TinyWhale-only plugins (Settings → Update) load.
+  const sourceBin = join(root, 'apps/cli/src/bin.ts')
+  if (existsSync(join(root, 'TINYWHALE.md')) && existsSync(sourceBin)) {
+    const node = resolveNodeExecutable(env)
+    return {
+      command: node,
+      args: ['--import', 'tsx/esm', sourceBin],
+      cwd: root,
+    }
   }
 
   const onPath = findOnPath('dsh', env)
@@ -98,7 +201,6 @@ export function resolveHarnessLaunch(options = {}) {
     return { command: known, args: [], cwd: root }
   }
 
-  const sourceBin = join(root, 'apps/cli/src/bin.ts')
   if (existsSync(sourceBin)) {
     const node = resolveNodeExecutable(env)
     return {
@@ -109,7 +211,7 @@ export function resolveHarnessLaunch(options = {}) {
   }
 
   throw new Error(
-    'Cannot find the harness CLI. Install `dsh` on PATH, or set TINYWHALE_DSH_BIN, or run from a TinyWhale checkout after `pnpm install`.',
+    'Cannot find the harness CLI. Install `dsh` on PATH, or set TINYWHALE_DSH_BIN, or run from a TinyWhale checkout after `pnpm build`.',
   )
 }
 
@@ -136,20 +238,26 @@ export function stopHarness(child) {
  */
 export async function attachOrStartHarness(options = {}) {
   const env = envWithGuiPath(options.env ?? process.env)
-  const port = Number(env.TINYWHALE_PORT ?? options.port ?? DEFAULT_PORT)
+  let port = Number(env.TINYWHALE_PORT ?? options.port ?? DEFAULT_PORT)
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error(`Invalid TinyWhale port: ${String(env.TINYWHALE_PORT ?? options.port)}`)
   }
   const host = options.host ?? DEFAULT_HOST
-  const url = harnessUrl(port, host)
+  const root = options.repoRoot ?? resolveRepoRoot({ env })
+  let url = harnessUrl(port, host)
   if (await isHttpReady(url)) {
-    return { url, port, child: undefined, attached: true }
+    const checkout = isTinyWhaleCheckout(root)
+    if (!checkout || options.attachOnly || await isTinyWhaleUpdateReady(url)) {
+      return { url, port, child: undefined, attached: true }
+    }
+    port = await findFreeHarnessPort(host, port + 1)
+    url = harnessUrl(port, host)
   }
   if (options.attachOnly) {
     throw new Error(`Nothing is serving ${url}, and attach-only mode will not start dsh.`)
   }
 
-  const launch = resolveHarnessLaunch({ env, repoRoot: options.repoRoot, home: options.home })
+  const launch = resolveHarnessLaunch({ env, repoRoot: root, home: options.home })
   const child = spawn(launch.command, [...launch.args, 'web', '--port', String(port)], {
     cwd: launch.cwd,
     env: { ...env },

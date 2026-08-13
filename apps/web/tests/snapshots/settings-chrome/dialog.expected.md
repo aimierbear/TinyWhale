@@ -43,3 +43,5 @@
   - button "排队发送":
     - text: 排队发送
     - img
+  - text: 软件更新 从上游仓库拉取最新代码。完成后请重启 TinyWhale。
+  - button "更新"

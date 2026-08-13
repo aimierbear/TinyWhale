@@ -14,12 +14,14 @@ desktop/
   resources/icon.png         1024px icon
   resources/icon.icns        macOS icon
   tests/                 node:test unit tests
+  scripts/install-dev-app.sh
+  scripts/write-checkout-root.mjs
   electron-builder.yml   macOS packager config
 ```
 
 ## Run
 
-The machine needs either `dsh` on `PATH` or a built/source checkout of this repository.
+The machine needs either `dsh` on `PATH` or this checkout after `pnpm build` (the source CLI will not boot until host `lib/` and the web frontend exist).
 
 If `npm start` fails because `Electron.app` is missing, npm blocked the download script. From `desktop/` run `node node_modules/electron/install.js` once.
 
@@ -29,7 +31,7 @@ npm install
 npm start
 ```
 
-`npm start` opens `http://127.0.0.1:3080/` when that address already returns HTTP 200. Otherwise it runs `dsh web --port 3080` and waits for the page.
+`npm start` attaches to `http://127.0.0.1:3080/` only when that origin already serves TinyWhale's `/tinywhale/status` channel. A published DeepSeek `dsh web` on the same port is ignored: the shell starts this checkout's `apps/cli/src/bin.ts` on the next free port. Set `TINYWHALE_DSH_BIN` to force a specific CLI.
 
 ```sh
 npm test              # unit tests, no Electron window
@@ -38,7 +40,7 @@ npm run icon          # rebuild resources/icon.png and icon.icns from the SVG
 npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
 ```
 
-The packaged app is a local unsigned build. After `npm run pack`, `npm run install:dev` copies it to `~/Applications/TinyWhale.app`. Click the Dock tile to launch; it is not notarized.
+The packaged app is a local unsigned build. After `npm run pack`, `npm run install:dev` copies it to `~/Applications/TinyWhale.app` and stamps this monorepo path into `Contents/Resources/tinywhale-checkout.json`, so the Dock app starts this checkout instead of a published `dsh` on PATH. Click the Dock tile to launch; it is not notarized.
 
 ## Environment
 
