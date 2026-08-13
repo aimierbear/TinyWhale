@@ -38,7 +38,7 @@ npm run icon          # rebuild resources/icon.png and icon.icns from the SVG
 npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
 ```
 
-The packaged app is a local unsigned build. Open `release/mac-arm64/TinyWhale.app`, or copy it to `~/Applications`. It is not notarized.
+The packaged app is a local unsigned build. After `npm run pack`, `npm run install:dev` copies it to `~/Applications/TinyWhale.app`. Click the Dock tile to launch; it is not notarized.
 
 ## Environment
 

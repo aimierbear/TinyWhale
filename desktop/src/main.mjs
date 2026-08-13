@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, nativeImage, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { attachOrStartHarness, stopHarness } from './harness.mjs'
+import { attachOrStartHarness, isHttpReady, stopHarness } from './harness.mjs'
 import { envWithGuiPath } from './gui-path.mjs'
 import { installApplicationMenu } from './menu.mjs'
 
@@ -14,8 +14,11 @@ Object.assign(process.env, envWithGuiPath(process.env))
 
 /** @type {import('node:child_process').ChildProcess | undefined} */
 let harnessChild
+/** @type {string | undefined} */
+let harnessPage
 /** @type {BrowserWindow | null} */
 let mainWindow = null
+let opening = false
 
 function iconPath() {
   const candidates = [
@@ -55,6 +58,10 @@ function createWindow() {
   })
   mainWindow = window
 
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = null
+  })
+
   window.on('page-title-updated', event => {
     event.preventDefault()
     window.setTitle('TinyWhale')
@@ -77,6 +84,12 @@ function createWindow() {
   return window
 }
 
+function focusWindow(window) {
+  if (window.isMinimized()) window.restore()
+  window.show()
+  window.focus()
+}
+
 async function showStartupFailure(error) {
   const message = error instanceof Error ? error.message : String(error)
   if (SMOKE) {
@@ -90,7 +103,59 @@ async function showStartupFailure(error) {
     message: '无法启动 TinyWhale',
     detail: `${message}\n\n需要本机已安装 dsh，或先在终端运行 dsh web。`,
   })
-  app.exit(1)
+}
+
+async function ensureHarness() {
+  if (harnessPage !== undefined && await isHttpReady(harnessPage)) {
+    return harnessPage
+  }
+  const session = await attachOrStartHarness({ attachOnly: ATTACH_ONLY || SMOKE })
+  harnessChild = session.child
+  harnessPage = session.url
+  if (harnessChild !== undefined) {
+    harnessChild.on('exit', () => {
+      harnessChild = undefined
+      harnessPage = undefined
+    })
+  }
+  return session.url
+}
+
+async function openTinyWhale() {
+  if (opening) return
+  opening = true
+  try {
+    const existing = mainWindow !== null && !mainWindow.isDestroyed() ? mainWindow : null
+    if (existing !== null && harnessPage !== undefined && await isHttpReady(harnessPage)) {
+      focusWindow(existing)
+      return
+    }
+
+    const window = existing ?? createWindow()
+    if (SMOKE) {
+      window.webContents.once('did-finish-load', () => {
+        process.stdout.write(`TINYWHALE_SMOKE_OK ${window.webContents.getURL()}\n`)
+        app.quit()
+      })
+      window.webContents.once('did-fail-load', (_event, code, description) => {
+        console.error(`TINYWHALE_SMOKE_FAIL ${code} ${description}`)
+        app.exit(1)
+      })
+    }
+
+    if (!SMOKE) {
+      await window.loadFile(join(here, 'loading.html'))
+      focusWindow(window)
+    }
+    const url = await ensureHarness()
+    await window.loadURL(url)
+    if (!SMOKE) focusWindow(window)
+  } catch (error) {
+    await showStartupFailure(error)
+    if (SMOKE) app.exit(1)
+  } finally {
+    opening = false
+  }
 }
 
 app.setName('TinyWhale')
@@ -107,51 +172,21 @@ if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    if (mainWindow === null) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
+    void openTinyWhale()
   })
 
   app.whenReady().then(async () => {
     installApplicationMenu()
-    const icon = iconPath()
-    if (icon !== undefined) {
-      app.dock?.setIcon(nativeImage.createFromPath(icon))
-    }
+    await openTinyWhale()
+  })
 
-    const window = createWindow()
-    if (SMOKE) {
-      window.webContents.once('did-finish-load', () => {
-        process.stdout.write(`TINYWHALE_SMOKE_OK ${window.webContents.getURL()}\n`)
-        app.quit()
-      })
-      window.webContents.once('did-fail-load', (_event, code, description) => {
-        console.error(`TINYWHALE_SMOKE_FAIL ${code} ${description}`)
-        app.exit(1)
-      })
-    }
-
-    try {
-      if (!SMOKE) {
-        await window.loadFile(join(here, 'loading.html'))
-        window.show()
-      }
-      const session = await attachOrStartHarness({ attachOnly: ATTACH_ONLY || SMOKE })
-      harnessChild = session.child
-      if (harnessChild !== undefined) {
-        harnessChild.on('exit', () => {
-          if (!SMOKE) app.quit()
-        })
-      }
-      await window.loadURL(session.url)
-    } catch (error) {
-      await showStartupFailure(error)
-    }
+  app.on('activate', () => {
+    void openTinyWhale()
   })
 }
 
 app.on('window-all-closed', () => {
-  app.quit()
+  if (process.platform !== 'darwin') app.quit()
 })
 
 app.on('before-quit', () => {
