@@ -36,5 +36,10 @@ apps/web/dist/
 .orig
 .worktrees/
 worktrees/
+.context/
+desktop/node_modules/
+desktop/dist/
+desktop/release/
+desktop/out/
 .agents/worktrees/
 .typert-*/

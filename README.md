@@ -1,20 +1,30 @@
-# DeepSeek Harness
+# TinyWhale
 
 English | [中文](README.zh.md)
 
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+TinyWhale is an independent desktop-oriented fork of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`). The runtime still uses a plugin architecture powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
 
-It uses an architecture where **everything is a plugin**, and is powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
+This project is **not affiliated with, endorsed by, or sponsored by DeepSeek**. "DeepSeek" is a trademark of its owner. Internal packages still use the `@deepseek-ai/*` scope so the fork can track upstream; the public product name is TinyWhale.
 
 ## Developer preview
 
-DeepSeek Harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
+The harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
 
-## Run
+## Run the desktop app
+
+Install `Node.js`, then from this repository:
+
+```sh
+cd desktop
+npm install
+npm start
+```
+
+The Electron shell attaches to `http://127.0.0.1:3080` when that address already serves the Web UI; otherwise it starts `dsh web` and opens the window. See [desktop/README.md](desktop/README.md).
+
+## Run the Web UI
 
 ### Run from `npm`
-
-Install `Node.js`, then run:
 
 ```sh
 npx @deepseek-ai/dsh web
@@ -24,11 +34,9 @@ The command starts the Web UI, served at `http://127.0.0.1:3080` by default. See
 
 ### Run from source
 
-To run from a repository checkout:
-
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+git clone https://github.com/aimierbear/TinyWhale.git
+cd TinyWhale
 pnpm install
 pnpm run build
 pnpm dsh web
@@ -36,9 +44,8 @@ pnpm dsh web
 
 ## Community and support
 
-- Feel free to submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/Ycq5dCaS4">DeepSeek Harness Discord community</a>.
+- Open TinyWhale-specific issues on [this repository](https://github.com/aimierbear/TinyWhale/issues).
+- Upstream harness discussion remains at [DeepSeek Harness Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
 
 ## Contributing
 
@@ -48,10 +55,10 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
 
-For agents, follow [AGENTS.md](AGENTS.md).
+For agents, follow [AGENTS.md](AGENTS.md). Fork-specific layout is in [TINYWHALE.md](TINYWHALE.md).
 
 ## License
 
 [MIT](LICENSE)
 
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Upstream copyright is retained. Attribution is in [NOTICE](NOTICE). Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
