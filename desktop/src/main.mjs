@@ -1,5 +1,4 @@
 import { app, BrowserWindow, dialog, shell } from 'electron'
-import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { attachOrStartHarness, isHttpReady, stopHarness } from './harness.mjs'
@@ -20,14 +19,6 @@ let harnessPage
 let mainWindow = null
 let opening = false
 
-function iconPath() {
-  const candidates = [
-    join(here, '../resources/icon.png'),
-    join(process.resourcesPath ?? '', 'icon.png'),
-  ]
-  return candidates.find(path => existsSync(path))
-}
-
 function isLocalUrl(raw) {
   try {
     const url = new URL(raw)
@@ -38,7 +29,9 @@ function isLocalUrl(raw) {
 }
 
 function createWindow() {
-  const icon = iconPath()
+  // Do not pass a PNG `icon` on macOS. Electron would call
+  // setApplicationIconImage, and Dock would show a raw square instead of the
+  // bundle .icns with the system squircle.
   const window = new BrowserWindow({
     width: 1280,
     height: 840,
@@ -48,7 +41,6 @@ function createWindow() {
     title: 'TinyWhale',
     backgroundColor: '#15515C',
     autoHideMenuBar: true,
-    icon: icon,
     webPreferences: {
       partition: 'persist:tinywhale',
       sandbox: true,
@@ -164,7 +156,6 @@ app.setAboutPanelOptions({
   applicationVersion: app.getVersion(),
   version: 'dev',
   copyright: '© 2026 TinyWhale contributors\nBased on DeepSeek Harness (MIT)',
-  iconPath: iconPath(),
 })
 
 const gotLock = app.requestSingleInstanceLock()
