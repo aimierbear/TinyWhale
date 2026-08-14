@@ -32,7 +32,7 @@ export const Config: z<Config> = z.object({
  * @param ctx - Host context that already provides `connection`.
  * @param config - resolved plugin config.
  */
-export function apply(ctx: Context, config?: Partial<Config>): void {
+export function apply(ctx: Context, config?: Config): void {
   const resolved = resolveUpdateConfig(config)
   const startPath = fileURLToPath(import.meta.url)
   const connection = ctx.get('connection') as {

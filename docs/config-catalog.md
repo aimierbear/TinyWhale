@@ -428,6 +428,29 @@ export interface Config {
 
 Source: [`packages/client/hmr/src/index.ts:31`](../packages/client/hmr/src/index.ts)
 
+<a id="deepseek-aidsh-client-ui-settings-update"></a>
+
+## `@deepseek-ai/dsh-client-ui-settings-update`
+
+Requires: `connection`
+
+```ts config-catalog
+/** Remote and branch merged by the Settings Update row. */
+export interface Config extends TinyWhaleUpdateConfig {}
+
+/** Resolved Host config for one checkout. */
+export interface TinyWhaleUpdateConfig {
+  /** Git remote name fetched and merged. */
+  remoteName: string
+  /** URL used when {@link TinyWhaleUpdateConfig.remoteName} is absent. */
+  remoteUrl: string
+  /** Branch name on that remote. */
+  branch: string
+}
+```
+
+Source: [`packages/client/ui-settings-update/src/index.ts:21`](../packages/client/ui-settings-update/src/index.ts)
+
 <a id="deepseek-aidsh-code-runtime-worker-thread"></a>
 
 ## `@deepseek-ai/dsh-code-runtime-worker-thread`

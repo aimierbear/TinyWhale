@@ -1,5 +1,7 @@
 # TinyWhale desktop
 
+English | [中文](README.zh.md)
+
 Electron shell around the local harness Web UI. This directory is **not** a pnpm workspace member: `apps/*` packages are treated as publishable release members by the harness gates.
 
 ```
