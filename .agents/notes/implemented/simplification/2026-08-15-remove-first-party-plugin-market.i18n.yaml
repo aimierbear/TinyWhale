@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/simplification/2026-08-15-remove-first-party-plugin-market.md
+2026-08-15-remove-first-party-plugin-market.md: 5b182d707da8c85dc158667d842b1bf9bec179e8
+2026-08-15-remove-first-party-plugin-market.zh.md: 889f49badef419052d26a0823febd6d7fd35ac77
