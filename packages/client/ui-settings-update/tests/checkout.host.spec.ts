@@ -49,6 +49,46 @@ describe('defaultCommands', () => {
   })
 })
 
+describe('describeTinyWhaleCheckout packaged', () => {
+  it('treats TINYWHALE_PACKAGED as an available install that does not merge git', async () => {
+    const status = describeTinyWhaleCheckout('/tmp/missing', resolveUpdateConfig(), [], {
+      TINYWHALE_PACKAGED: '1',
+      TINYWHALE_VERSION: '0.1.0',
+      TINYWHALE_RELEASE_URL: 'https://example.test/releases',
+    })
+    expect(status).toMatchObject({
+      available: true,
+      channel: 'packaged',
+      version: '0.1.0',
+      releaseUrl: 'https://example.test/releases',
+    })
+    await expect(applyTinyWhaleUpdate(
+      '/tmp/missing',
+      resolveUpdateConfig(),
+      NEVER,
+      undefined,
+      [],
+      {
+        TINYWHALE_PACKAGED: '1',
+        TINYWHALE_RELEASE_URL: 'https://example.test/releases',
+      },
+    )).resolves.toMatchObject({
+      outcome: 'manual',
+      detail: 'https://example.test/releases',
+    })
+  })
+
+  it('defaults the packaged download page when TINYWHALE_RELEASE_URL is absent', () => {
+    expect(describeTinyWhaleCheckout('/tmp/missing', resolveUpdateConfig(), [], {
+      TINYWHALE_PACKAGED: '1',
+    }).releaseUrl).toBe('https://github.com/aimierbear/TinyWhale/releases')
+    expect(describeTinyWhaleCheckout('/tmp/missing', resolveUpdateConfig(), [], {
+      TINYWHALE_PACKAGED: '1',
+      TINYWHALE_RELEASE_URL: '',
+    }).releaseUrl).toBe('https://github.com/aimierbear/TinyWhale/releases')
+  })
+})
+
 describe('findTinyWhaleRoot', () => {
   it('walks up to TINYWHALE.md and stops without one', () => {
     const root = mkdtempSync(join(tmpdir(), 'tinywhale-root-'))

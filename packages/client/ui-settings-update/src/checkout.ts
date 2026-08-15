@@ -73,13 +73,29 @@ export function describeTinyWhaleCheckout(
   startPath: string,
   config: TinyWhaleUpdateConfig,
   extraPaths: readonly string[] = [],
+  env: NodeJS.ProcessEnv = process.env,
 ): TinyWhaleUpdateStatus {
+  if (env.TINYWHALE_PACKAGED === '1') {
+    const releaseUrl = env.TINYWHALE_RELEASE_URL !== undefined && env.TINYWHALE_RELEASE_URL !== ''
+      ? env.TINYWHALE_RELEASE_URL
+      : 'https://github.com/aimierbear/TinyWhale/releases'
+    return {
+      available: true,
+      channel: 'packaged',
+      version: env.TINYWHALE_VERSION,
+      releaseUrl,
+      remoteName: config.remoteName,
+      remoteUrl: config.remoteUrl,
+      branch: config.branch,
+    }
+  }
   const candidates = [startPath, ...extraPaths]
   for (const candidate of candidates) {
     const root = findTinyWhaleRoot(candidate)
     if (root !== undefined && existsSync(join(root, '.git'))) {
       return {
         available: true,
+        channel: 'checkout',
         root,
         remoteName: config.remoteName,
         remoteUrl: config.remoteUrl,
@@ -112,9 +128,13 @@ export async function applyTinyWhaleUpdate(
   signal: AbortSignal,
   commands: TinyWhaleUpdateCommands = defaultCommands(),
   extraPaths: readonly string[] = [],
+  env: NodeJS.ProcessEnv = process.env,
 ): Promise<TinyWhaleUpdateApplyResult> {
   if (applying) return { outcome: 'refused-busy' }
-  const status = describeTinyWhaleCheckout(startPath, config, extraPaths)
+  const status = describeTinyWhaleCheckout(startPath, config, extraPaths, env)
+  if (status.channel === 'packaged') {
+    return { outcome: 'manual', detail: status.releaseUrl }
+  }
   if (!status.available || status.root === undefined) {
     return { outcome: 'refused-unavailable' }
   }

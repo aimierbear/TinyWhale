@@ -27,6 +27,7 @@ export type UpdateRowProps =
 const OUTCOME_KEY = {
   updated: 'success',
   'already-current': 'alreadyCurrent',
+  manual: 'manual',
   'refused-dirty': 'dirty',
   'refused-detached': 'detached',
   'refused-unavailable': 'unavailable',
@@ -42,7 +43,28 @@ const ERROR_OUTCOMES = new Set<TinyWhaleUpdateOutcome>([
 type ViewState =
   | { readonly status: 'loading' }
   | { readonly status: 'unavailable'; readonly detail?: string }
-  | { readonly status: 'ready' }
+  | { readonly status: 'ready'; readonly channel?: TinyWhaleUpdateStatus['channel']; readonly version?: string }
+
+function withDetail(label: string, detail: string | undefined): string {
+  if (detail === undefined || detail === '') return label
+  return `${label} ${detail}`
+}
+
+function describeUpdate(
+  view: ViewState,
+  result: TinyWhaleUpdateApplyResult | null,
+  t: UpdateRowProps['t'],
+): string {
+  if (view.status === 'loading') return t('checking')
+  if (view.status === 'unavailable') return withDetail(t('unavailable'), view.detail)
+  const outcome = result?.outcome
+  if (outcome === undefined) {
+    if (view.channel !== 'packaged') return t('description')
+    if (view.version === undefined || view.version === '') return t('packagedDescription')
+    return `${t('packagedDescription')} (${view.version})`
+  }
+  return withDetail(t(OUTCOME_KEY[outcome]), result?.detail)
+}
 
 /**
  * Render the Update row on every loopback Settings mount.
@@ -59,7 +81,9 @@ export function UpdateRow({ load, apply, t }: UpdateRowProps): ReactNode {
     void load().then(
       (status) => {
         if (!current) return
-        setView(status.available ? { status: 'ready' } : { status: 'unavailable' })
+        setView(status.available
+          ? { status: 'ready', channel: status.channel, version: status.version }
+          : { status: 'unavailable' })
       },
       (error: unknown) => {
         if (!current) return
@@ -75,17 +99,7 @@ export function UpdateRow({ load, apply, t }: UpdateRowProps): ReactNode {
   const busy = applying
   const canApply = view.status === 'ready' && !busy
   const outcome = result?.outcome
-  const description = view.status === 'loading'
-    ? t('checking')
-    : view.status === 'unavailable'
-      ? (view.detail !== undefined && view.detail !== ''
-        ? `${t('unavailable')} ${view.detail}`
-        : t('unavailable'))
-      : outcome === undefined
-        ? t('description')
-        : result?.detail !== undefined && result.detail !== ''
-          ? `${t(OUTCOME_KEY[outcome])} ${result.detail}`
-          : t(OUTCOME_KEY[outcome])
+  const description = describeUpdate(view, result, t)
   const alert = view.status === 'unavailable'
     || (outcome !== undefined && ERROR_OUTCOMES.has(outcome))
 
@@ -105,7 +119,12 @@ export function UpdateRow({ load, apply, t }: UpdateRowProps): ReactNode {
           setApplying(true)
           setResult(null)
           void apply().then(
-            (next) => { setResult(next) },
+            (next) => {
+              if (next.outcome === 'manual' && next.detail !== undefined && next.detail !== '') {
+                window.open(next.detail, '_blank', 'noopener,noreferrer')
+              }
+              setResult(next)
+            },
             (error: unknown) => {
               setResult({
                 outcome: 'failed',
@@ -115,7 +134,7 @@ export function UpdateRow({ load, apply, t }: UpdateRowProps): ReactNode {
           ).finally(() => { setApplying(false) })
         }}
       >
-        {t('apply')}
+        {view.status === 'ready' && view.channel === 'packaged' ? t('openReleases') : t('apply')}
       </Button>
     </div>
   )

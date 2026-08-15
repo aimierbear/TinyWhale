@@ -23,10 +23,16 @@ export const DEFAULT_UPSTREAM_BRANCH = 'master'
 
 /** Local checkout facts the Settings row needs before it offers Update. */
 export interface TinyWhaleUpdateStatus {
-  /** True when TINYWHALE.md and a git directory sit at the discovered root. */
+  /** True when this install can run apply (a git checkout or a packaged app). */
   available: boolean
   /** Absolute checkout root when {@link TinyWhaleUpdateStatus.available} is true. */
   root?: string
+  /** How this Host was launched; packaged apps do not merge git. */
+  channel?: TinyWhaleUpdateChannel
+  /** Stamped product version for a packaged install. */
+  version?: string
+  /** Download page a packaged apply should open. */
+  releaseUrl?: string
   /** Remote name that apply fetches and merges. */
   remoteName: string
   /** Remote URL used when the named remote is absent. */
@@ -35,10 +41,14 @@ export interface TinyWhaleUpdateStatus {
   branch: string
 }
 
+/** How this process was installed. Omitted on older Hosts. */
+export type TinyWhaleUpdateChannel = 'checkout' | 'packaged'
+
 /** Closed apply outcomes the Settings row localizes. */
 export type TinyWhaleUpdateOutcome =
   | 'updated'
   | 'already-current'
+  | 'manual'
   | 'refused-dirty'
   | 'refused-detached'
   | 'refused-unavailable'

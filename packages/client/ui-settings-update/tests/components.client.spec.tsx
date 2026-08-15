@@ -63,6 +63,49 @@ describe('UpdateRow', () => {
     expect(second.container.querySelector('button')).toBeNull()
   })
 
+  it('offers a download page for a packaged install', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const load = vi.fn(async () => ({
+      available: true,
+      channel: 'packaged' as const,
+      version: '0.1.0',
+      releaseUrl: 'https://example.test/releases',
+      remoteName: 'upstream',
+      remoteUrl: 'u',
+      branch: 'master',
+    }))
+    const applyUpdate = vi.fn(async () => ({
+      outcome: 'manual' as const,
+      detail: 'https://example.test/releases',
+    }))
+    render(<UpdateRow {...props({ load, apply: applyUpdate })} />)
+    await waitFor(() => { expect(screen.getByText(`${en.packagedDescription} (0.1.0)`)).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: en.openReleases }))
+    await waitFor(() => { expect(screen.getByText(`${en.manual} https://example.test/releases`)).toBeTruthy() })
+    expect(open).toHaveBeenCalledWith('https://example.test/releases', '_blank', 'noopener,noreferrer')
+    open.mockRestore()
+  })
+
+  it('does not open a window when packaged apply returns no URL', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
+    const load = vi.fn(async () => ({
+      available: true,
+      channel: 'packaged' as const,
+      remoteName: 'upstream',
+      remoteUrl: 'u',
+      branch: 'master',
+    }))
+    render(<UpdateRow {...props({
+      load,
+      apply: vi.fn(async () => ({ outcome: 'manual' as const })),
+    })} />)
+    await waitFor(() => { expect(screen.getByRole('button', { name: en.openReleases })).toBeTruthy() })
+    fireEvent.click(screen.getByRole('button', { name: en.openReleases }))
+    await waitFor(() => { expect(screen.getByText(en.manual)).toBeTruthy() })
+    expect(open).not.toHaveBeenCalled()
+    open.mockRestore()
+  })
+
   it('keeps the row visible when the Host has no checkout', async () => {
     const load = vi.fn(async () => ({ available: false, remoteName: 'upstream', remoteUrl: 'u', branch: 'master' }))
     render(<UpdateRow {...props({ load, apply: vi.fn() })} />)
