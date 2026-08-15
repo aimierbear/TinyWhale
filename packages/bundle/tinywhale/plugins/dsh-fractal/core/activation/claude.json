@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "runtime_id": "claude",
+  "kind": "claude_hooks",
+  "target": "~/.claude/settings.json",
+  "owner_id": "ai.fractal.claude.v1",
+  "retire_commands": [
+    "bash ~/.claude/hooks/fractal-inject.sh",
+    "bash ~/.claude/hooks/post-edit.sh"
+  ],
+  "events": [
+    {"name": "SessionStart", "timeout": 10},
+    {"name": "PreToolUse", "matcher": "Edit|Write", "timeout": 10},
+    {"name": "PostToolUse", "matcher": "Edit|Write", "timeout": 10},
+    {"name": "Stop", "timeout": 10}
+  ]
+}

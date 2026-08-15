@@ -44,6 +44,9 @@ const FIRST_PARTY = new Set([
   '@deepseek-ai/node-addon-landlock-run',
   '@deepseek-ai/node-addon-landlock-run-linux-arm64',
   '@deepseek-ai/node-addon-landlock-run-linux-x64',
+  // TinyWhale-owned extras, shipped as file: copies under the extras bundle.
+  'dsh-fractal',
+  'dsh-security-codex',
 ])
 
 /** Official SDK identity covered by the project's narrow owner authorization. */

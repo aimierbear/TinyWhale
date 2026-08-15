@@ -7,6 +7,7 @@ TinyWhale is the public product name of this repository. It is a fork of [DeepSe
 - User-facing name, window title, and GitHub repository: **TinyWhale**.
 - Internal npm packages remain `@deepseek-ai/*` until an explicit rescope. The workspace treats `apps/*` as publishable release members; do not add a private Electron package there.
 - Desktop shell lives in [`desktop/`](desktop/README.md) and is **not** a pnpm workspace member.
+- New `web` profiles include [`@deepseek-ai/dsh-tinywhale`](packages/bundle/tinywhale/README.md) after `dsh-web-app`. An already-initialized `$DSH_HOME/profiles/web` is not rewritten.
 - Keep the upstream copyright in `LICENSE` and the attribution in `NOTICE` when distributing.
 
 ## Syncing upstream

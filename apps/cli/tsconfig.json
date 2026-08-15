@@ -30,6 +30,9 @@
       "path": "../../packages/bundle/headless"
     },
     {
+      "path": "../../packages/bundle/tinywhale"
+    },
+    {
       "path": "../../packages/bundle/web-app"
     },
     {

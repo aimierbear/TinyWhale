@@ -1,0 +1,54 @@
+{
+  "action_contract_version": 1,
+  "adapter": "fractal_agent.adapters.pi:normalize",
+  "adapter_version": "1.3.0",
+  "artifacts": [
+    {
+      "path": "fractal_agent/adapters/pi.py",
+      "sha256": "6ca95d91a88da9a4163a6d34581036440e17e9ef24250ccb69a464b4ecc36d57",
+      "mode": "0644"
+    },
+    {
+      "path": "fractal_agent/adapters/common.py",
+      "sha256": "41508ccd3d2392be3df7da3c92ddd39503543b0f3b03961a35d2adaffd32de0a",
+      "mode": "0644"
+    },
+    {
+      "path": "fractal_agent/host_bridge.py",
+      "sha256": "1c184e070fa8c7ce35e457e0eaae081f51957382b00cfd0785e94dc296656e5c",
+      "mode": "0644"
+    },
+    {
+      "path": "activation/pi.json",
+      "sha256": "6dcc3c4c63ed88da8f49c76bf119e6cc913d8971f80f058bb17ba68d9da7bffd",
+      "mode": "0644"
+    },
+    {
+      "path": "bridges/pi/fractal-agent.ts",
+      "sha256": "6e124a885257eaf05666be83e80fcfdd179bcb0d4c661bc8ee2eb762c43a1498",
+      "mode": "0644"
+    }
+  ],
+  "capabilities": {
+    "change_detection": "native_post_tool",
+    "closeout": "nonblocking_reminder",
+    "constraint_delivery_proof": "unsupported",
+    "constraints": "active_read",
+    "rules": "agents_md",
+    "skills": "native_install"
+  },
+  "id": "pi",
+  "manifest_schema_version": 1,
+  "owned_node_template_hash": "6dcc3c4c63ed88da8f49c76bf119e6cc913d8971f80f058bb17ba68d9da7bffd",
+  "owner_id": "ai.fractal.pi.v1",
+  "rules_path": "~/.config/fractal-agent/rules/current",
+  "skill_source": "~/.agents/skills/fractal-self-description",
+  "variants": [
+    "pi-coding-agent"
+  ],
+  "verification": {
+    "discover": "native_probe",
+    "effective": "native_probe",
+    "invoke": "native_probe"
+  }
+}

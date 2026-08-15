@@ -1,0 +1,8 @@
+- insert:
+    - id: dsh-fractal
+      name: dsh-fractal
+      config:
+        enabledPresets:
+          - standard
+          - code
+          - cordis

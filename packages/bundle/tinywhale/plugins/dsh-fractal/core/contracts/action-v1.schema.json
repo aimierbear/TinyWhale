@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.fractal-agent.invalid/action-v1.schema.json",
+  "title": "Fractal Agent action request v1",
+  "oneOf": [
+    {"$ref": "#/$defs/begin_change_scope"},
+    {"$ref": "#/$defs/resolve_constraints"},
+    {"$ref": "#/$defs/confirm_constraint_delivery"},
+    {"$ref": "#/$defs/record_observed_change"},
+    {"$ref": "#/$defs/closeout_status"},
+    {"$ref": "#/$defs/end_change_scope"},
+    {"$ref": "#/$defs/acknowledge_closeout"},
+    {"$ref": "#/$defs/prepare_unowned_audit"},
+    {"$ref": "#/$defs/resolve_unowned"}
+  ],
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096
+    },
+    "envelope": {
+      "type": "object",
+      "required": [
+        "contract_version",
+        "operation_id",
+        "runtime_id",
+        "adapter_version",
+        "session_id",
+        "occurred_at"
+      ],
+      "properties": {
+        "contract_version": {"const": 1},
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runtime_id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,63}$"
+        },
+        "adapter_version": {"$ref": "#/$defs/non_empty_string"},
+        "session_id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "occurred_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:[Zz]|[+-][0-9]{2}:[0-9]{2})$"
+        }
+      }
+    },
+    "begin_change_scope": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["cwd", "scope_mode"],
+          "properties": {
+            "cwd": {"$ref": "#/$defs/non_empty_string"},
+            "scope_mode": {"enum": ["native_session", "manual_task"]}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "resolve_constraints": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["cwd", "file", "scope_id"],
+          "properties": {
+            "cwd": {"$ref": "#/$defs/non_empty_string"},
+            "file": {"$ref": "#/$defs/non_empty_string"},
+            "scope_id": {"$ref": "#/$defs/non_empty_string"},
+            "rule_fingerprint": {"$ref": "#/$defs/non_empty_string"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "confirm_constraint_delivery": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["delivery_token", "proof_type", "proof_correlation"],
+          "properties": {
+            "delivery_token": {"$ref": "#/$defs/non_empty_string"},
+            "proof_type": {
+              "enum": ["host_acceptance_callback", "causal_retry_event"]
+            },
+            "proof_correlation": {"$ref": "#/$defs/non_empty_string"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "record_observed_change": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": [
+            "cwd",
+            "file",
+            "scope_id",
+            "evidence_type",
+            "tool_outcome"
+          ],
+          "properties": {
+            "cwd": {"$ref": "#/$defs/non_empty_string"},
+            "file": {"$ref": "#/$defs/non_empty_string"},
+            "scope_id": {"$ref": "#/$defs/non_empty_string"},
+            "evidence_type": {
+              "enum": ["native_success", "observed_final_diff"]
+            },
+            "tool_outcome": {
+              "enum": ["success", "failed", "cancelled", "unknown"]
+            },
+            "before_fingerprint": {"$ref": "#/$defs/non_empty_string"},
+            "after_fingerprint": {"$ref": "#/$defs/non_empty_string"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "closeout_status": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["cwd", "scope_id", "completion_reason"],
+          "properties": {
+            "cwd": {"$ref": "#/$defs/non_empty_string"},
+            "scope_id": {"$ref": "#/$defs/non_empty_string"},
+            "completion_reason": {
+              "enum": [
+                "turn_complete",
+                "session_end",
+                "agent_settled",
+                "manual_check",
+                "failed",
+                "cancelled",
+                "replaced",
+                "unknown"
+              ]
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "end_change_scope": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["scope_id", "terminal_outcome"],
+          "properties": {
+            "scope_id": {"$ref": "#/$defs/non_empty_string"},
+            "terminal_outcome": {
+              "enum": [
+                "clean",
+                "completed",
+                "failed",
+                "cancelled",
+                "replaced",
+                "unowned_only"
+              ]
+            }
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "acknowledge_closeout": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": [
+            "closeout_request_id",
+            "acknowledgement_outcome",
+            "sync_receipt"
+          ],
+          "properties": {
+            "closeout_request_id": {"$ref": "#/$defs/non_empty_string"},
+            "acknowledgement_outcome": {"const": "completed"},
+            "sync_receipt": {"type": "object"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "prepare_unowned_audit": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": ["project", "selection", "skill_version"],
+          "properties": {
+            "project": {"$ref": "#/$defs/non_empty_string"},
+            "selection": {"enum": ["explicit", "current_unresolved"]},
+            "skill_version": {"const": "1.0.0"},
+            "event_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"$ref": "#/$defs/non_empty_string"}
+            },
+            "cursor": {"$ref": "#/$defs/non_empty_string"},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 200}
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {"selection": {"const": "explicit"}},
+                "required": ["selection"]
+              },
+              "then": {
+                "required": ["event_ids"],
+                "properties": {
+                  "event_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"$ref": "#/$defs/non_empty_string"}
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "resolve_unowned": {
+      "type": "object",
+      "allOf": [
+        {"$ref": "#/$defs/envelope"},
+        {
+          "type": "object",
+          "required": [
+            "project",
+            "event_ids",
+            "audit_token",
+            "audit_result",
+            "decision_class",
+            "audit_receipt"
+          ],
+          "properties": {
+            "project": {"$ref": "#/$defs/non_empty_string"},
+            "event_ids": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"$ref": "#/$defs/non_empty_string"}
+            },
+            "audit_token": {"$ref": "#/$defs/non_empty_string"},
+            "audit_result": {"enum": ["verified", "inconclusive", "failed"]},
+            "decision_class": {
+              "enum": [
+                "technical",
+                "product_intent",
+                "financial_cost",
+                "credential_lifecycle",
+                "irreversible_action"
+              ]
+            },
+            "audit_receipt": {"type": "object"}
+          }
+        }
+      ],
+      "unevaluatedProperties": false
+    }
+  }
+}

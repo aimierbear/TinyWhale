@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "runtime_id": "cursor",
+  "kind": "cursor_hooks",
+  "target": "~/.cursor/hooks.json",
+  "owner_id": "ai.fractal.cursor.v1",
+  "retire_commands": [],
+  "events": [
+    {"name": "sessionStart", "timeout": 10},
+    {"name": "preToolUse", "matcher": "Write|StrReplace|ApplyPatch|Delete", "timeout": 10},
+    {"name": "postToolUse", "matcher": "Write|StrReplace|ApplyPatch|Delete", "timeout": 10},
+    {"name": "postToolUseFailure", "matcher": "Write|StrReplace|ApplyPatch|Delete", "timeout": 10},
+    {"name": "afterFileEdit", "timeout": 10},
+    {"name": "stop", "timeout": 10, "loop_limit": 1}
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "action_contract_version": 1,
+  "adapter": "fractal_agent.adapters.cursor:normalize",
+  "adapter_version": "1.3.0",
+  "artifacts": [
+    {
+      "path": "fractal_agent/adapters/cursor.py",
+      "sha256": "a9f9247ab8584ed8ea26ba578da8135e8e4ead03e4fa413b3f3f7fd2357a32b7",
+      "mode": "0644"
+    },
+    {
+      "path": "fractal_agent/adapters/common.py",
+      "sha256": "41508ccd3d2392be3df7da3c92ddd39503543b0f3b03961a35d2adaffd32de0a",
+      "mode": "0644"
+    },
+    {
+      "path": "fractal_agent/host_bridge.py",
+      "sha256": "1c184e070fa8c7ce35e457e0eaae081f51957382b00cfd0785e94dc296656e5c",
+      "mode": "0644"
+    },
+    {
+      "path": "activation/cursor.json",
+      "sha256": "965aa5df1fd37ebc09991ec269b5f5bd132ee5b925e8a4b8f7d235404631ccae",
+      "mode": "0644"
+    }
+  ],
+  "capabilities": {
+    "change_detection": "native_post_tool",
+    "closeout": "nonblocking_reminder",
+    "constraint_delivery_proof": "unsupported",
+    "constraints": "active_read",
+    "rules": "agents_md",
+    "skills": "shared_agents_dir"
+  },
+  "id": "cursor",
+  "manifest_schema_version": 1,
+  "owned_node_template_hash": "965aa5df1fd37ebc09991ec269b5f5bd132ee5b925e8a4b8f7d235404631ccae",
+  "owner_id": "ai.fractal.cursor.v1",
+  "rules_path": "~/.config/fractal-agent/rules/current",
+  "skill_source": "~/.agents/skills/fractal-self-description",
+  "variants": [
+    "cursor-desktop"
+  ],
+  "verification": {
+    "discover": "native_probe",
+    "effective": "native_probe",
+    "invoke": "native_probe"
+  }
+}

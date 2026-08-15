@@ -1,0 +1,42 @@
+{
+  "$id": "https://local.fractal-agent.invalid/audit-output-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decision_class": {
+      "enum": [
+        "technical",
+        "product_intent",
+        "financial_cost",
+        "credential_lifecycle",
+        "irreversible_action"
+      ]
+    },
+    "remediation": {
+      "items": {
+        "maxLength": 240,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 10,
+      "type": "array"
+    },
+    "result": {
+      "enum": [
+        "verified",
+        "inconclusive",
+        "failed"
+      ]
+    },
+    "schema_version": {
+      "const": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "result",
+    "decision_class",
+    "remediation"
+  ],
+  "type": "object"
+}

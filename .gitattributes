@@ -8,6 +8,12 @@
 
 *.pdf binary
 
+# In-box extras ship upstream artifacts as-is. Their minified bundles and
+# closed scanner node_modules trip `git diff --check` on trailing spaces and
+# markdown `=======` underlines that are not conflict markers.
+packages/bundle/tinywhale/plugins/dsh-better-sidebar/lib/** -whitespace
+packages/bundle/tinywhale/plugins/dsh-fractal/core/graph_scanner/node_modules/** -whitespace conflict-marker-size=32
+
 # Pairing records are generated from the three confirmed owner-blob pairs.
 # The worktree-local installer registers the fail-closed driver command.
 *.i18n.yaml merge=dsh-translation-pairing

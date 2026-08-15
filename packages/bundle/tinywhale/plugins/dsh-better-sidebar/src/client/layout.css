@@ -1,0 +1,54 @@
+/**
+ * Local detach from github:omdsh-dev/DSH-better-sidebar#277e7d3b
+ * (2026-08-14): do not put margin-right on #root. That shrinks the whole
+ * AppFrame below DSH's 1024px left-sidebar auto-collapse, so a default
+ * 1280px client window hid the session list on every launch. Squeeze only
+ * the center column — the same trick the bottom panel already used.
+ *
+ * Layout push: when a panel is open it OCCUPIES the layout instead of
+ * floating over it. Both the right-panel width and the bottom-panel height
+ * squeeze ONLY the center column — the app's own left session list keeps
+ * its full AppFrame viewport.
+ *
+ * DSH 0.1.x wraps slot hosts in [data-slot] containers, so the AppFrame
+ * grid lives one level deeper: #root > div[data-slot="root"] > div (the
+ * frame). Its grid items are (frame > div:nth-child(1..3)): sidebarCol,
+ * centerCol, detailsCol. A stretched grid item shrinks by its margins, so
+ * the conversation content (output + input bar) yields the vacated strips
+ * and the fixed panels cover them.
+ *
+ * The sizes ride CSS variables updated by the Sidebar shell (0 while
+ * collapsed); expand/collapse animates both the margins and the panel
+ * slides on the same theme duration. Drags disable the transition so the
+ * layout tracks the pointer.
+ */
+#root > div[data-slot="root"] > div > div:nth-child(2) {
+  margin-right: var(--dsh-sidebar-width, 0px);
+  margin-bottom: var(--dsh-sidebar-height, 0px);
+  transition:
+    margin-right var(--ds-transition-duration-slow) var(--ds-ease-in-out),
+    margin-bottom var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* When the sidebar is collapsed, the toggle cluster reclaims the top-right
+   corner. Push the DSH session header's right padding out so its right-aligned
+   utilities (the "Session log" download capsule) yield the corner instead of
+   hiding under the cluster. The header default right-pads 28px; the 2-button
+   cluster spans right 10→70px, so 78px clears it with an 8px gap. Anchor on
+   the header's slot host wrapper ([data-slot="conversation.session.header"])
+   rather than a positional path: DSH 0.1.x nests the header several levels
+   under the center column. The Sidebar shell toggles the body attribute with
+   the panel open state. */
+body[data-dsh-sidebar-collapsed] [data-slot="conversation.session.header"] > header {
+  padding-right: 78px;
+}
+
+body[data-dsh-sidebar-dragging] #root > div[data-slot="root"] > div > div:nth-child(2) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root > div[data-slot="root"] > div > div:nth-child(2) {
+    transition: none;
+  }
+}

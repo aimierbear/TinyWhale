@@ -1,0 +1,4 @@
+- insert:
+    - id: dsh-security-codex
+      name: dsh-security-codex
+      config: {}

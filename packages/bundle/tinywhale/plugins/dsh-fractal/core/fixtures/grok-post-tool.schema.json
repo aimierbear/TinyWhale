@@ -1,0 +1,17 @@
+{
+  "runtime_id": "grok",
+  "schema_version": 1,
+  "shape": {
+    "cwd": "<synthetic:path>",
+    "hookEventName": "PostToolUse",
+    "sessionId": "<synthetic:id>",
+    "toolInput": {
+      "path": "<synthetic:path>"
+    },
+    "toolName": "write_file",
+    "toolResult": {
+      "success": true
+    }
+  },
+  "status": "synthetic"
+}

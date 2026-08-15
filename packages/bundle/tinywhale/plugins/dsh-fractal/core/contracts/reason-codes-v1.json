@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "prefixes": [
+    "contract_",
+    "path_",
+    "rule_",
+    "event_",
+    "state_",
+    "audit_",
+    "capability_",
+    "config_",
+    "adapter_"
+  ],
+  "required": [
+    "contract_version_unsupported",
+    "contract_field_missing",
+    "path_outside_root",
+    "path_root_unknown",
+    "rule_none",
+    "rule_ignored",
+    "event_outcome_unproven",
+    "event_graph_reconciled",
+    "event_document_updated",
+    "event_duplicate",
+    "state_scope_initializing",
+    "state_lock_timeout",
+    "state_watermark_stale",
+    "audit_evidence_stale",
+    "audit_receipt_invalid",
+    "capability_artifact_verified",
+    "capability_fallback",
+    "capability_health_report",
+    "capability_probe_current",
+    "capability_probe_missing",
+    "capability_runtime_version_unknown",
+    "capability_unsupported",
+    "config_concurrent_change",
+    "adapter_identity_missing",
+    "adapter_file_missing",
+    "adapter_field_invalid"
+  ]
+}

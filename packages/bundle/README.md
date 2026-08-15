@@ -8,6 +8,7 @@ Profile bundles: npm packages whose manifest declares `"dsh": { "bundle": { "pat
 |---|---|---|
 | [`base/`](base/README.md) | The shared dsh core every profile applies first | — (patch only) |
 | [`web-app/`](web-app/README.md) | Browser surface: web patch layer + runtime glue plugin | mounts rows |
+| [`tinywhale/`](tinywhale/README.md) | TinyWhale extras on the shipped `web` template | mounts extras rows |
 | [`headless/`](headless/README.md) | Direct one-shot task mode over base, with no Host or Web layer | mounts `headless-runner` |
 
 In-box bundles resolve from the dsh installation; out-of-tree bundles install into a profile through `dsh plugin --profile <name> add <package>`.

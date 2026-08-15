@@ -1,0 +1,33 @@
+# TinyWhale extras over dsh-web-app. Applied after the official Web surface;
+# the profile's own cordis.patch.yml and any --patch overlays still win.
+#
+# Each insert restates the row the corresponding package would add as its own
+# bundle layer, so the extras bundle can stay one in-box layer instead of
+# seven user-managed profile dependencies.
+- insert:
+    - id: dsh-fractal
+      name: dsh-fractal
+      config:
+        enabledPresets:
+          - standard
+          - code
+          - cordis
+
+    - id: dsh-security-codex
+      name: dsh-security-codex
+      config: {}
+
+    - id: dsh-market
+      name: dshmarket
+
+    - id: genui
+      name: '@omdsh-dev/dsh-genui'
+
+    - id: auto-continue
+      name: dsh-client-auto-continue
+
+    - id: better-sidebar
+      name: dsh-better-sidebar
+
+    - id: modlens
+      name: '@liustack/modlens'

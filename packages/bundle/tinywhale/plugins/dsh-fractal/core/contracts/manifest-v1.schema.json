@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.fractal-agent.invalid/manifest-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest_schema_version",
+    "action_contract_version",
+    "id",
+    "variants",
+    "adapter_version",
+    "adapter",
+    "owner_id",
+    "artifacts",
+    "owned_node_template_hash",
+    "capabilities",
+    "verification",
+    "rules_path",
+    "skill_source"
+  ],
+  "properties": {
+    "manifest_schema_version": {"const": 1},
+    "action_contract_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 4096}
+    },
+    "adapter_version": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "adapter": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^[A-Za-z0-9_./-]+:[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "owner_id": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256", "mode"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "mode": {"enum": ["0644", "0755"]}
+        }
+      }
+    },
+    "owned_node_template_hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "constraints",
+        "constraint_delivery_proof",
+        "change_detection",
+        "closeout",
+        "skills",
+        "rules"
+      ],
+      "properties": {
+        "constraints": {
+          "enum": ["native_inject", "block_then_retry", "active_read", "unsupported"]
+        },
+        "constraint_delivery_proof": {
+          "enum": ["host_acceptance_callback", "causal_retry_event", "unsupported"]
+        },
+        "change_detection": {
+          "enum": ["native_post_tool", "batch_reconcile", "manual_check", "unsupported"]
+        },
+        "closeout": {
+          "enum": ["blocking_gate", "nonblocking_reminder", "manual_check", "unsupported"]
+        },
+        "skills": {
+          "enum": ["shared_agents_dir", "native_install", "unsupported"]
+        },
+        "rules": {
+          "enum": ["native_rules", "agents_md", "shared_rules", "unsupported"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {"constraints": {"const": "block_then_retry"}},
+            "required": ["constraints"]
+          },
+          "then": {
+            "properties": {
+              "constraint_delivery_proof": {
+                "enum": ["host_acceptance_callback", "causal_retry_event"]
+              }
+            },
+            "required": ["constraint_delivery_proof"]
+          }
+        }
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discover", "invoke", "effective"],
+      "properties": {
+        "discover": {"enum": ["fixture", "manual", "fallback", "native_probe"]},
+        "invoke": {"enum": ["fixture", "manual", "fallback", "native_probe"]},
+        "effective": {"enum": ["fixture", "manual", "fallback", "native_probe"]}
+      }
+    },
+    "rules_path": {"type": "string", "minLength": 1, "maxLength": 4096},
+    "skill_source": {"type": "string", "minLength": 1, "maxLength": 4096}
+  }
+}

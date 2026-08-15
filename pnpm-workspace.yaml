@@ -46,6 +46,9 @@ allowBuilds:
   # them only because they ship lifecycle scripts, but those are no-ops we don't
   # need, so we deny them — install still succeeds.
   '@google/genai': false
+  # Published tarball already contains lib/; TinyWhale extras must not rebuild
+  # this community plugin from source during workspace install.
+  dshmarket: false
   protobufjs: false
   node-addon-require-builtin: false
   # JSONL durability calls MoveFileExW with write-through publication on Windows.
@@ -67,6 +70,9 @@ minimumReleaseAgeExclude:
   - node-addon-require-builtin-win32-ia32-msvc@0.1.4
   - node-addon-require-builtin-win32-x64-msvc@0.1.4
   - node-addon-require-builtin@0.1.4
+  # TinyWhale extras: first-party default plugins, pinned on add.
+  - dsh-client-auto-continue@0.3.2
+  - dshmarket@1.0.3
 
 patchedDependencies:
   node-pty@1.1.0: patches/node-pty@1.1.0.patch

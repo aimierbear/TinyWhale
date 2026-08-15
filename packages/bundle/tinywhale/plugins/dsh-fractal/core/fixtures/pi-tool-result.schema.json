@@ -1,0 +1,15 @@
+{
+  "runtime_id": "pi",
+  "schema_version": 1,
+  "shape": {
+    "cwd": "<synthetic:path>",
+    "event": "tool_execution_end",
+    "input": {
+      "path": "<synthetic:path>"
+    },
+    "is_error": false,
+    "session_id": "<synthetic:id>",
+    "tool": "write"
+  },
+  "status": "synthetic"
+}
