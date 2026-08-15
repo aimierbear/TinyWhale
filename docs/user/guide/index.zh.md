@@ -2,7 +2,9 @@
 
 [English](index.md) | 中文
 
-先按照[根 README](../../../README.md#run-the-web-ui)启动 Web UI；命令会打印其访问地址。本指南从服务器已经运行的状态开始。`dsh` 进程会把调用目录作为默认文件系统位置，但新的 Web UI 在添加工作区前不会选中任何工作区。
+在 Apple Silicon Mac 上可以不用命令行：从 [GitHub Releases](https://github.com/aimierbear/TinyWhale/releases) 下载 DMG，把 TinyWhale 拖进「应用程序」，再打开。若系统提示无法验证开发者，打开**系统设置 → 隐私与安全性**，选择**仍要打开**。然后从下面的**配置模型**继续。
+
+若要从源码启动，请按[根 README](../../../README.md#run-the-web-ui)；命令会打印其访问地址。本指南从窗口或服务器已经运行的状态开始。`dsh` 进程会把调用目录作为默认文件系统位置，但新的 Web UI 在添加工作区前不会选中任何工作区。
 
 ## 配置模型
 

@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-08-15-tinywhale-packaged-desktop-runtime.md
+2026-08-15-tinywhale-packaged-desktop-runtime.md: 6062d430204e814cbcc9cec36e0cca04b6e52fc5
+2026-08-15-tinywhale-packaged-desktop-runtime.zh.md: cb52126bd076ff0880aef14c5957b55d0422d17d

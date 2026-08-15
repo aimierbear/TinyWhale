@@ -10,7 +10,11 @@ This project is **not affiliated with, endorsed by, or sponsored by DeepSeek**. 
 
 The harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
 
-## Run the desktop app
+## Install the packaged app
+
+On Apple Silicon Macs, download the DMG from [GitHub Releases](https://github.com/aimierbear/TinyWhale/releases), drag TinyWhale into Applications, then open it. The install vendors Node, pnpm, Git, and the harness. You do not need a checkout or Homebrew. This is a developer-preview build: it is not notarized until a signed release is published.
+
+## Run the desktop app from source
 
 Install `Node.js`, then from this repository:
 

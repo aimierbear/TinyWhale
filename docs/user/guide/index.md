@@ -2,7 +2,9 @@
 
 English | [中文](index.zh.md)
 
-Start the Web UI through the [root README](../../../README.md#run-the-web-ui); the command prints its URL. This guide begins after that server is running. The `dsh` process uses its invoking directory as the default filesystem location, but a fresh Web UI has no selected workspace until you add one.
+On Apple Silicon Macs you can skip the command line: download the DMG from [GitHub Releases](https://github.com/aimierbear/TinyWhale/releases), drag TinyWhale into Applications, then open it. If macOS says the developer cannot be verified, open **System Settings → Privacy & Security** and choose **Open Anyway**. Then continue from **Configure a model** below.
+
+To start from source instead, use the [root README](../../../README.md#run-the-web-ui); the command prints its URL. This guide begins after the window or server is running. The `dsh` process uses its invoking directory as the default filesystem location, but a fresh Web UI has no selected workspace until you add one.
 
 ## Configure a model
 

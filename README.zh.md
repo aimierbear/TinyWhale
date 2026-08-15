@@ -10,7 +10,11 @@ TinyWhale 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness
 
 该 harness 目前处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**
 
-## 运行桌面应用
+## 安装打包应用
+
+在 Apple Silicon Mac 上，从 [GitHub Releases](https://github.com/aimierbear/TinyWhale/releases) 下载 DMG，把 TinyWhale 拖进「应用程序」，再打开。安装包自带 Node、pnpm、Git 和 harness，不需要检出或 Homebrew。这是开发者预览构建：在签过名的发行版出来之前，它未经公证。
+
+## 从源码运行桌面应用
 
 安装 `Node.js` 后，在本仓库中执行：
 
