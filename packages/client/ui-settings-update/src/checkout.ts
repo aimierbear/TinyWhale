@@ -82,7 +82,9 @@ export function describeTinyWhaleCheckout(
     return {
       available: true,
       channel: 'packaged',
-      version: env.TINYWHALE_VERSION,
+      ...(env.TINYWHALE_VERSION === undefined || env.TINYWHALE_VERSION === ''
+        ? {}
+        : { version: env.TINYWHALE_VERSION }),
       releaseUrl,
       remoteName: config.remoteName,
       remoteUrl: config.remoteUrl,
@@ -133,7 +135,9 @@ export async function applyTinyWhaleUpdate(
   if (applying) return { outcome: 'refused-busy' }
   const status = describeTinyWhaleCheckout(startPath, config, extraPaths, env)
   if (status.channel === 'packaged') {
-    return { outcome: 'manual', detail: status.releaseUrl }
+    return status.releaseUrl === undefined || status.releaseUrl === ''
+      ? { outcome: 'manual' }
+      : { outcome: 'manual', detail: status.releaseUrl }
   }
   if (!status.available || status.root === undefined) {
     return { outcome: 'refused-unavailable' }
