@@ -12,7 +12,8 @@
 
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   DEFAULT_PROFILE_BUNDLES,
   initProfile,
@@ -26,6 +27,24 @@ import {
 import { INSTALL_ANCHOR } from './profile-boot.ts'
 
 const NAME = 'dsh'
+
+/**
+ * Locate pnpm: explicit env, the sibling next to a packaged `dsh` wrapper,
+ * then PATH. Packaged installs must not tell the user to install pnpm.
+ */
+export function resolvePnpmExecutable(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  const explicit = env.TINYWHALE_PNPM
+  if (typeof explicit === 'string' && explicit !== '' && existsSync(explicit)) return explicit
+  let dir = dirname(fileURLToPath(import.meta.url))
+  for (let i = 0; i < 8; i += 1) {
+    const candidate = join(dir, 'bin', 'pnpm')
+    if (existsSync(candidate) && existsSync(join(dir, 'node', 'bin', 'node'))) return candidate
+    const parent = dirname(dir)
+    if (parent === dir) break
+    dir = parent
+  }
+  return undefined
+}
 
 /**
  * Whether a resolved dependency exports a profile patch, i.e. is a bundle.
@@ -124,17 +143,25 @@ export function runPlugin(profile: string, args: readonly string[]): number {
     process.stderr.write(`${NAME}: initialized profile ${profile} at ${dir}\n`)
   }
   const before = readProfileManifest(NAME, dir)
+  const bundled = resolvePnpmExecutable()
+  const pnpm = bundled ?? 'pnpm'
   // Windows resolves pnpm through its .cmd shim, which spawn() refuses
   // without a shell since the CVE-2024-27980 hardening.
-  const result = spawnSync('pnpm', args.map(argument => anchorPathSpec(argument, process.cwd())), {
+  const result = spawnSync(pnpm, args.map(argument => anchorPathSpec(argument, process.cwd())), {
     cwd: dir,
     stdio: 'inherit',
-    shell: process.platform === 'win32',
+    shell: process.platform === 'win32' && bundled === undefined,
+    env: process.env,
   })
   if (result.error !== undefined) {
     const code = (result.error as NodeJS.ErrnoException).code
     if (code === 'ENOENT') {
-      process.stderr.write(`${NAME}: pnpm not found on PATH — install pnpm to manage profile plugins\n`)
+      const packaged = process.env.TINYWHALE_PACKAGED === '1'
+      process.stderr.write(
+        packaged
+          ? `${NAME}: 安装包损坏：找不到内置 pnpm，请重新安装 TinyWhale\n`
+          : `${NAME}: pnpm not found on PATH — install pnpm to manage profile plugins\n`,
+      )
       return 127
     }
     throw result.error
