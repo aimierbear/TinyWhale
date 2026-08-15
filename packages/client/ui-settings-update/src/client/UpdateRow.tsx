@@ -81,9 +81,15 @@ export function UpdateRow({ load, apply, t }: UpdateRowProps): ReactNode {
     void load().then(
       (status) => {
         if (!current) return
-        setView(status.available
-          ? { status: 'ready', channel: status.channel, version: status.version }
-          : { status: 'unavailable' })
+        if (!status.available) {
+          setView({ status: 'unavailable' })
+          return
+        }
+        setView({
+          status: 'ready',
+          ...(status.channel === undefined ? {} : { channel: status.channel }),
+          ...(status.version === undefined || status.version === '' ? {} : { version: status.version }),
+        })
       },
       (error: unknown) => {
         if (!current) return
