@@ -10,6 +10,7 @@ desktop/
   src/menu.mjs           TinyWhale application menu
   src/harness.mjs        Attach to or spawn `dsh web`
   src/gui-path.mjs       Finder-safe PATH for Node / dsh
+  src/packaged.mjs       Release-install stamp and bundled runtime env
   src/resolve-node.mjs   Find a real Node binary (never Electron's execPath)
   src/loading.html       Startup screen
   resources/icon-master.jpg  App icon artwork
@@ -18,6 +19,8 @@ desktop/
   tests/                 node:test unit tests
   scripts/install-dev-app.sh
   scripts/write-checkout-root.mjs
+  scripts/build-runtime.ts
+  runtime-root/          Deploy-root manifest (workspace member)
   electron-builder.yml   macOS packager config
 ```
 
@@ -39,10 +42,14 @@ npm start
 npm test              # unit tests, no Electron window
 npm run smoke         # attach to an already-running Web UI and quit
 npm run icon          # rebuild resources/icon.png and icon.icns from the SVG
-npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
+npm run pack          # unsigned TinyWhale.app under release/mac-arm64/ (dev checkout)
+npm run build:runtime # assemble the bundled Node / dsh / pnpm / git / python tree
+npm run dist          # self-contained unsigned DMG (does not stamp this checkout)
 ```
 
-打包产物是本地未签名构建。`npm run pack` 之后，`npm run install:dev` 会把它复制到 `~/Applications/TinyWhale.app`，并把本 monorepo 路径写入 `Contents/Resources/tinywhale-checkout.json`，因此 Dock 应用会启动本检出，而不是 PATH 上已发布的 `dsh`。点击 Dock 图标即可启动；该应用未经公证。
+`npm run pack` 再 `npm run install:dev` 是**开发用** Dock 应用：它把本 monorepo 路径写入 `Contents/Resources/tinywhale-checkout.json`，并启动 `apps/cli/src/bin.ts`。点击 Dock 图标即可启动；该应用未经公证。
+
+`npm run dist` 是**发行**安装包：`build-runtime` 把 Node、pnpm、Git、CPython 和一份 hoisted 的 `dsh` 树放进 `runtime/`，然后 electron-builder 写出 DMG 并盖上 `tinywhale-packaged.json`。这个应用不需要检出、系统 Node 或 Homebrew。
 
 ## 环境变量
 
@@ -52,9 +59,11 @@ npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
 | `TINYWHALE_DSH_BIN` | 显式指定的 `dsh` 可执行文件 |
 | `TINYWHALE_NODE_EXECUTABLE` | 仅在从 `apps/cli/src/bin.ts` 启动时使用的显式 Node 二进制 |
 | `TINYWHALE_ATTACH_ONLY=1` | 不要 spawn `dsh`；若没有进程在监听则失败 |
+| `TINYWHALE_PACKAGED=1` | 发行应用会设置；设置里的更新会打开 Releases，而不是做 git merge |
+| `TINYWHALE_PNPM` | `dsh plugin` 使用的显式 pnpm |
 
-用 Electron 的 `process.execPath` 去 spawn Node 脚本会再拉起一个 GUI 进程。壳会查找真正的 `node`（或运行 `dsh` 二进制，其 shebang 使用系统 Node）。
+用 Electron 的 `process.execPath` 去 spawn Node 脚本会再拉起一个 GUI 进程。打包包装脚本总是 exec 捆绑的 Node；开发用 Dock 应用会在 PATH 上查找真正的 `node`。
 
 ## 打包状态
 
-`electron-builder` 可以从本目录产出 `.app` / DMG。已签名、自包含的 Mac 应用仍需要把 harness 运行时复制进 `extraResources`，并捆绑一份 Node。本目录只是壳；它尚未把整个 monorepo 打进去。
+发行 DMG 是自包含的未签名构建。对外分发前仍需签名和公证，否则会撞上 Gatekeeper。不要让打包应用和 `pnpm dsh web` 同时对着同一个 `$DSH_HOME`：每次启动都会把 `$DSH_HOME/profiles/node_modules` 重指到自己的安装。

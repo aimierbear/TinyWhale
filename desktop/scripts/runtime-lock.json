@@ -1,0 +1,26 @@
+{
+  "node": {
+    "version": "24.19.0",
+    "url": "https://nodejs.org/dist/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz",
+    "sha256": "8294b7aa9b03997481c06babf1e8b270c859358f27da57a11509afe537ac381d",
+    "strip": 1
+  },
+  "pnpm": {
+    "version": "11.7.0",
+    "url": "https://registry.npmjs.org/pnpm/-/pnpm-11.7.0.tgz",
+    "sha256": "deafa7ec98a1218b6a047289b92fbe2395c1e22d3495bb711653013218ee15ee",
+    "strip": 1
+  },
+  "python": {
+    "version": "3.12.14+20260814",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.12.14%2B20260814-aarch64-apple-darwin-install_only.tar.gz",
+    "sha256": "4572133a5542f306b9bdb155da5800f9e38950cd0a98d469b832ce256fe299ea",
+    "strip": 1
+  },
+  "git": {
+    "version": "2.53.0-4",
+    "url": "https://github.com/desktop/dugite-native/releases/download/v2.53.0-4/dugite-native-v2.53.0-4098283-macOS-arm64.tar.gz",
+    "sha256": "f9dc64635a5b62fbd7ad95db73268bbb8912255ac516d65d37bf7af22fcb8ffe",
+    "strip": 0
+  }
+}

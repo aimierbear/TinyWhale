@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { attachOrStartHarness, isHttpReady, stopHarness } from './harness.mjs'
 import { envWithGuiPath } from './gui-path.mjs'
 import { installApplicationMenu } from './menu.mjs'
+import { isTranslocatedApp, resolvePackagedRuntimeRoot } from './packaged.mjs'
 
 const SMOKE = process.argv.includes('--smoke')
 const ATTACH_ONLY = process.argv.includes('--attach-only') || process.env.TINYWHALE_ATTACH_ONLY === '1'
@@ -83,6 +84,9 @@ function focusWindow(window) {
 }
 
 function startupHint(message) {
+  if (resolvePackagedRuntimeRoot() !== undefined) {
+    return '请把 TinyWhale 拖到「应用程序」文件夹后再打开。如果已经装过，请重新安装一次。'
+  }
   if (
     message.includes('typert.host.js')
     || message.includes('plugin tree failed to load')
@@ -179,6 +183,16 @@ if (!gotLock) {
 
   app.whenReady().then(async () => {
     installApplicationMenu()
+    if (resolvePackagedRuntimeRoot() !== undefined && isTranslocatedApp()) {
+      await dialog.showMessageBox({
+        type: 'warning',
+        title: 'TinyWhale',
+        message: '请先把 TinyWhale 装到「应用程序」',
+        detail: '不要从磁盘映像里直接打开。把 TinyWhale 拖到「应用程序」文件夹，再从那里启动。',
+      })
+      app.quit()
+      return
+    }
     await openTinyWhale()
   })
 

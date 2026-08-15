@@ -1,0 +1,35 @@
+name: desktop-release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'desktop-v*'
+
+jobs:
+  dmg:
+    runs-on: macos-14
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Assemble runtime and DMG
+        working-directory: desktop
+        run: |
+          npm install
+          npm run dist
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: TinyWhale-mac-arm64
+          path: |
+            desktop/release/**/*.dmg
+            desktop/release/**/*.app

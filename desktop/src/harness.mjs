@@ -7,6 +7,7 @@ import { homedir } from 'node:os'
 import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { envWithGuiPath, knownDshBin } from './gui-path.mjs'
+import { envForPackagedRuntime, resolvePackagedRuntimeRoot } from './packaged.mjs'
 import { resolveNodeExecutable } from './resolve-node.mjs'
 
 const desktopRoot = dirname(fileURLToPath(new URL('.', import.meta.url)))
@@ -172,11 +173,12 @@ export function findOnPath(name, env = process.env) {
  */
 export function resolveHarnessLaunch(options = {}) {
   const home = options.home ?? homedir()
-  const env = envWithGuiPath(options.env ?? process.env, home)
+  const runtimeRoot = options.runtimeRoot ?? resolvePackagedRuntimeRoot()
+  const env = envWithGuiPath(options.env ?? process.env, home, runtimeRoot)
   const root = options.repoRoot ?? resolveRepoRoot({ env })
   const explicit = env.TINYWHALE_DSH_BIN
   if (explicit) {
-    return { command: explicit, args: [], cwd: root }
+    return { command: explicit, args: [], cwd: runtimeRoot === undefined ? root : home }
   }
 
   // A published `dsh` on PATH is DeepSeek Harness, not this checkout.
@@ -188,6 +190,14 @@ export function resolveHarnessLaunch(options = {}) {
       command: node,
       args: ['--import', 'tsx/esm', sourceBin],
       cwd: root,
+    }
+  }
+
+  if (runtimeRoot !== undefined) {
+    return {
+      command: join(runtimeRoot, 'bin', 'dsh'),
+      args: [],
+      cwd: home,
     }
   }
 
@@ -211,13 +221,20 @@ export function resolveHarnessLaunch(options = {}) {
   }
 
   throw new Error(
-    'Cannot find the harness CLI. Install `dsh` on PATH, or set TINYWHALE_DSH_BIN, or run from a TinyWhale checkout after `pnpm build`.',
+    'Cannot find the harness CLI. This TinyWhale install is missing its bundled runtime. Reinstall the app, or set TINYWHALE_DSH_BIN.',
   )
 }
 
 /**
- * @param {import('node:child_process').ChildProcess} child
+ * Whether an already-listening origin is this product's Web UI.
+ * A packaged or checkout app must not attach to a random HTTP 200.
+ * @param {{ attachOnly: boolean, checkout: boolean, packaged: boolean, tinywhaleReady: boolean }} state
  */
+export function shouldAttachToReadyOrigin(state) {
+  if (state.attachOnly || state.tinywhaleReady) return true
+  return !state.checkout && !state.packaged
+}
+
 export function stopHarness(child) {
   if (child.exitCode !== null || child.signalCode !== null) return
   if (process.platform === 'win32' && child.pid !== undefined) {
@@ -237,7 +254,11 @@ export function stopHarness(child) {
  * }} [options]
  */
 export async function attachOrStartHarness(options = {}) {
-  const env = envWithGuiPath(options.env ?? process.env)
+  const runtimeRoot = options.runtimeRoot ?? resolvePackagedRuntimeRoot()
+  const baseEnv = options.env ?? process.env
+  const env = runtimeRoot === undefined
+    ? envWithGuiPath(baseEnv)
+    : envForPackagedRuntime(runtimeRoot, envWithGuiPath(baseEnv, undefined, runtimeRoot))
   let port = Number(env.TINYWHALE_PORT ?? options.port ?? DEFAULT_PORT)
   if (!Number.isInteger(port) || port <= 0 || port > 65535) {
     throw new Error(`Invalid TinyWhale port: ${String(env.TINYWHALE_PORT ?? options.port)}`)
@@ -247,7 +268,14 @@ export async function attachOrStartHarness(options = {}) {
   let url = harnessUrl(port, host)
   if (await isHttpReady(url)) {
     const checkout = isTinyWhaleCheckout(root)
-    if (!checkout || options.attachOnly || await isTinyWhaleUpdateReady(url)) {
+    const packaged = runtimeRoot !== undefined
+    const tinywhaleReady = await isTinyWhaleUpdateReady(url)
+    if (shouldAttachToReadyOrigin({
+      attachOnly: options.attachOnly === true,
+      checkout,
+      packaged,
+      tinywhaleReady,
+    })) {
       return { url, port, child: undefined, attached: true }
     }
     port = await findFreeHarnessPort(host, port + 1)
@@ -257,7 +285,7 @@ export async function attachOrStartHarness(options = {}) {
     throw new Error(`Nothing is serving ${url}, and attach-only mode will not start dsh.`)
   }
 
-  const launch = resolveHarnessLaunch({ env, repoRoot: root, home: options.home })
+  const launch = resolveHarnessLaunch({ env, repoRoot: root, home: options.home, runtimeRoot })
   const child = spawn(launch.command, [...launch.args, 'web', '--port', String(port)], {
     cwd: launch.cwd,
     env: { ...env },

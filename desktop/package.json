@@ -13,9 +13,10 @@
     "smoke": "electron . --smoke",
     "test": "node --test tests/*.test.mjs",
     "icon": "bash scripts/make-icon.sh",
-    "pack": "electron-builder --mac dir && node scripts/write-checkout-root.mjs release/mac-arm64/TinyWhale.app/Contents/Resources/tinywhale-checkout.json",
+    "pack": "node scripts/ensure-runtime-placeholder.mjs && electron-builder --mac dir && node scripts/write-checkout-root.mjs release/mac-arm64/TinyWhale.app/Contents/Resources/tinywhale-checkout.json",
     "install:dev": "bash scripts/install-dev-app.sh",
-    "dist": "electron-builder --mac dir"
+    "build:runtime": "cd .. && pnpm exec tsx desktop/scripts/build-runtime.ts",
+    "dist": "npm run build:runtime && electron-builder --mac dmg --arm64"
   },
   "devDependencies": {
     "electron": "43.4.0",

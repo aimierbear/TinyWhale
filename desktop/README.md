@@ -10,6 +10,7 @@ desktop/
   src/menu.mjs           TinyWhale application menu
   src/harness.mjs        Attach to or spawn `dsh web`
   src/gui-path.mjs       Finder-safe PATH for Node / dsh
+  src/packaged.mjs       Release-install stamp and bundled runtime env
   src/resolve-node.mjs   Find a real Node binary (never Electron's execPath)
   src/loading.html       Startup screen
   resources/icon-master.jpg  App icon artwork
@@ -18,6 +19,8 @@ desktop/
   tests/                 node:test unit tests
   scripts/install-dev-app.sh
   scripts/write-checkout-root.mjs
+  scripts/build-runtime.ts
+  runtime-root/          Deploy-root manifest (workspace member)
   electron-builder.yml   macOS packager config
 ```
 
@@ -39,10 +42,14 @@ npm start
 npm test              # unit tests, no Electron window
 npm run smoke         # attach to an already-running Web UI and quit
 npm run icon          # rebuild resources/icon.png and icon.icns from the SVG
-npm run pack          # unsigned TinyWhale.app under release/mac-arm64/
+npm run pack          # unsigned TinyWhale.app under release/mac-arm64/ (dev checkout)
+npm run build:runtime # assemble the bundled Node / dsh / pnpm / git / python tree
+npm run dist          # self-contained unsigned DMG (does not stamp this checkout)
 ```
 
-The packaged app is a local unsigned build. After `npm run pack`, `npm run install:dev` copies it to `~/Applications/TinyWhale.app` and stamps this monorepo path into `Contents/Resources/tinywhale-checkout.json`, so the Dock app starts this checkout instead of a published `dsh` on PATH. Click the Dock tile to launch; it is not notarized.
+`npm run pack` then `npm run install:dev` is the **developer** Dock app: it stamps this monorepo path into `Contents/Resources/tinywhale-checkout.json` and starts `apps/cli/src/bin.ts`. Click the Dock tile to launch; it is not notarized.
+
+`npm run dist` is the **release** install: `build-runtime` vendors Node, pnpm, Git, CPython, and a hoisted `dsh` tree into `runtime/`, then electron-builder writes a DMG and stamps `tinywhale-packaged.json`. That app does not need a checkout, system Node, or Homebrew.
 
 ## Environment
 
@@ -52,9 +59,11 @@ The packaged app is a local unsigned build. After `npm run pack`, `npm run insta
 | `TINYWHALE_DSH_BIN` | Explicit `dsh` executable |
 | `TINYWHALE_NODE_EXECUTABLE` | Explicit Node binary used only when launching from `apps/cli/src/bin.ts` |
 | `TINYWHALE_ATTACH_ONLY=1` | Do not spawn `dsh`; fail if nothing is listening |
+| `TINYWHALE_PACKAGED=1` | Set by a release app; Settings Update opens Releases instead of merging git |
+| `TINYWHALE_PNPM` | Explicit pnpm used by `dsh plugin` |
 
-Spawning a Node script with Electron's `process.execPath` starts another GUI process. The shell looks up a real `node` (or runs the `dsh` binary, whose shebang uses the system Node).
+Spawning a Node script with Electron's `process.execPath` starts another GUI process. The packaged wrapper always execs the bundled Node; the developer Dock app looks up a real `node` on PATH.
 
 ## Packaging status
 
-`electron-builder` can produce a `.app` / DMG from this folder. A signed, self-contained Mac app still needs the harness runtime copied into `extraResources` and a bundled Node. This directory is the shell; it does not yet vendor the whole monorepo.
+A release DMG is a self-contained unsigned build. Signing and notarization are still required before shipping to machines that enforce Gatekeeper. Do not run a packaged app and `pnpm dsh web` against the same `$DSH_HOME` at the same time: each launch rewrites `$DSH_HOME/profiles/node_modules` to point at its own install.

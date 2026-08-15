@@ -11,11 +11,13 @@ import { delimiter, join } from 'node:path'
  * @param {string} filePath
  * @returns {boolean}
  */
-export function isElectronBinary(filePath) {
+export function isElectronBinary(filePath, versions = process.versions, execPath = process.execPath) {
+  if (versions.electron && filePath === execPath) return true
   const normalized = filePath.replaceAll('\\', '/')
   return /(?:^|\/)electron(?:\.exe)?$/i.test(normalized)
     || /Electron\.app\//.test(normalized)
     || /[/]electron[/]/i.test(normalized)
+    || /TinyWhale\.app\/Contents\/MacOS\/TinyWhale$/i.test(normalized)
 }
 
 /**

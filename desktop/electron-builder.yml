@@ -8,6 +8,18 @@ files:
   - src/**/*
   - resources/icon.png
   - package.json
+extraResources:
+  - from: runtime
+    to: runtime
+    filter:
+      - '**/*'
+      - '!**/.DS_Store'
+  - from: ../LICENSE
+    to: LICENSE
+  - from: ../NOTICE
+    to: NOTICE
+  - from: ../THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md
 extraMetadata:
   main: src/main.mjs
 mac:
@@ -16,10 +28,22 @@ mac:
   identity: null
   hardenedRuntime: false
   gatekeeperAssess: false
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
   target:
     - target: dir
       arch:
         - arm64
+dmg:
+  title: 把 TinyWhale 拖到应用程序
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
   extendInfo:
     CFBundleDisplayName: TinyWhale
     CFBundleName: TinyWhale

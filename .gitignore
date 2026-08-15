@@ -48,5 +48,8 @@ desktop/node_modules/
 desktop/dist/
 desktop/release/
 desktop/out/
+desktop/runtime/
+desktop/.runtime-stage/
+desktop/.runtime-cache/
 .agents/worktrees/
 .typert-*/

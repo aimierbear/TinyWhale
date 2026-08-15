@@ -9,6 +9,8 @@ test('isElectronBinary recognizes Electron paths and rejects Node', () => {
   assert.equal(isElectronBinary('/usr/local/bin/node'), false)
   assert.equal(isElectronBinary('/usr/local/bin/electron'), true)
   assert.equal(isElectronBinary('/tmp/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'), true)
+  assert.equal(isElectronBinary('/Applications/TinyWhale.app/Contents/MacOS/TinyWhale'), true)
+  assert.equal(isElectronBinary('/usr/local/bin/node', { electron: '43.0.0' }, '/usr/local/bin/node'), true)
 })
 
 test('resolveNodeExecutable prefers TINYWHALE_NODE_EXECUTABLE over Electron execPath', () => {
@@ -25,6 +27,10 @@ test('resolveNodeExecutable prefers TINYWHALE_NODE_EXECUTABLE over Electron exec
 test('resolveNodeExecutable refuses to return Electron as Node', () => {
   assert.throws(
     () => resolveNodeExecutable({ PATH: '' }, '/usr/local/bin/electron'),
+    /Cannot find a real Node/,
+  )
+  assert.throws(
+    () => resolveNodeExecutable({ PATH: '' }, '/Applications/TinyWhale.app/Contents/MacOS/TinyWhale'),
     /Cannot find a real Node/,
   )
 })

@@ -1,17 +1,20 @@
 /**
  * Finder-launched Mac apps inherit a tiny PATH. Prepend the directories where
  * this machine's Node / dsh usually live so the packaged app can start the
- * harness the same way a terminal can.
+ * harness the same way a terminal can. A release .app prepends its bundled
+ * runtime bins instead of guessing Homebrew.
  */
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
+import { packagedPathExtras, resolvePackagedRuntimeRoot } from './packaged.mjs'
 
 /**
  * @param {string} [home]
  * @returns {string[]}
  */
-export function guiPathExtras(home = homedir()) {
+export function guiPathExtras(home = homedir(), runtimeRoot = resolvePackagedRuntimeRoot()) {
+  if (runtimeRoot !== undefined) return packagedPathExtras(runtimeRoot)
   return [
     join(home, '.hermes/node/bin'),
     '/opt/homebrew/bin',
@@ -27,9 +30,9 @@ export function guiPathExtras(home = homedir()) {
  * @param {string} [home]
  * @returns {string}
  */
-export function enrichPath(env = process.env, home = homedir()) {
+export function enrichPath(env = process.env, home = homedir(), runtimeRoot = resolvePackagedRuntimeRoot()) {
   const current = env.PATH ?? env.Path ?? ''
-  const parts = [...guiPathExtras(home), ...current.split(delimiter).filter(Boolean)]
+  const parts = [...guiPathExtras(home, runtimeRoot), ...current.split(delimiter).filter(Boolean)]
   return [...new Set(parts)].join(delimiter)
 }
 
@@ -38,8 +41,8 @@ export function enrichPath(env = process.env, home = homedir()) {
  * @param {string} [home]
  * @returns {NodeJS.ProcessEnv}
  */
-export function envWithGuiPath(env = process.env, home = homedir()) {
-  return { ...env, PATH: enrichPath(env, home) }
+export function envWithGuiPath(env = process.env, home = homedir(), runtimeRoot = resolvePackagedRuntimeRoot()) {
+  return { ...env, PATH: enrichPath(env, home, runtimeRoot) }
 }
 
 /**

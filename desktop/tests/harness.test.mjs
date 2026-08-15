@@ -12,6 +12,7 @@ import {
   isTinyWhaleUpdateReady,
   resolveHarnessLaunch,
   resolveRepoRoot,
+  shouldAttachToReadyOrigin,
   waitForHttp,
 } from '../src/harness.mjs'
 
@@ -98,6 +99,41 @@ test('resolveRepoRoot reads a tinywhale-checkout stamp from process.resourcesPat
     if (previous === undefined) delete process.resourcesPath
     else process.resourcesPath = previous
   }
+})
+
+test('shouldAttachToReadyOrigin refuses a random server for checkout and packaged apps', () => {
+  assert.equal(shouldAttachToReadyOrigin({
+    attachOnly: false, checkout: false, packaged: true, tinywhaleReady: false,
+  }), false)
+  assert.equal(shouldAttachToReadyOrigin({
+    attachOnly: false, checkout: true, packaged: false, tinywhaleReady: false,
+  }), false)
+  assert.equal(shouldAttachToReadyOrigin({
+    attachOnly: false, checkout: false, packaged: true, tinywhaleReady: true,
+  }), true)
+  assert.equal(shouldAttachToReadyOrigin({
+    attachOnly: true, checkout: false, packaged: true, tinywhaleReady: false,
+  }), true)
+})
+
+test('resolveHarnessLaunch uses a packaged runtime when there is no checkout', () => {
+  const resources = mkdtempSync(join(tmpdir(), 'tinywhale-pkg-res-'))
+  writeFileSync(join(resources, 'tinywhale-packaged.json'), `${JSON.stringify({ mode: 'packaged' })}\n`)
+  const runtime = join(resources, 'runtime')
+  mkdirSync(join(runtime, 'bin'), { recursive: true })
+  mkdirSync(join(runtime, 'node', 'bin'), { recursive: true })
+  writeFileSync(join(runtime, 'bin', 'dsh'), '')
+  writeFileSync(join(runtime, 'node', 'bin', 'node'), '')
+  const home = mkdtempSync(join(tmpdir(), 'tinywhale-pkg-home-'))
+  const launch = resolveHarnessLaunch({
+    env: { PATH: '' },
+    repoRoot: home,
+    home,
+    runtimeRoot: runtime,
+  })
+  assert.equal(launch.command, join(runtime, 'bin', 'dsh'))
+  assert.deepEqual(launch.args, [])
+  assert.equal(launch.cwd, home)
 })
 
 test('resolveHarnessLaunch uses TINYWHALE_DSH_BIN first', () => {
