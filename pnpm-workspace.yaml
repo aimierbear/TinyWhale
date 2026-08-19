@@ -74,7 +74,7 @@ minimumReleaseAgeExclude:
   - node-addon-require-builtin-win32-x64-msvc@0.1.4
   - node-addon-require-builtin@0.1.4
   # TinyWhale extras: first-party default plugins, pinned on add.
-  - dsh-client-auto-continue@0.3.2
+  - dsh-client-auto-continue@0.6.2
   - dshmarket@1.0.3
 
 patchedDependencies:

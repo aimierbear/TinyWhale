@@ -1865,8 +1865,8 @@ importers:
         specifier: file:./plugins/dsh-better-sidebar
         version: file:packages/bundle/tinywhale/plugins/dsh-better-sidebar(@deepseek-ai/cordis@vendor+cordis)(@deepseek-ai/dsh-client-locale@packages+client+locale)(@deepseek-ai/dsh-client-runtime@packages+client+runtime)(@deepseek-ai/dsh-client-schema-form@packages+client+schema-form)(@deepseek-ai/dsh-client-ui-conversation@packages+client+ui-conversation)(@deepseek-ai/dsh-client-ui-primitives@packages+client+ui-primitives)(@deepseek-ai/dsh-client-ui-settings@packages+client+ui-settings)(@deepseek-ai/dsh-client-ui-slots@packages+client+ui-slots)(@deepseek-ai/dsh-client-web-react@packages+client+web-react)(@deepseek-ai/dsh-host-webserver@packages+host+webserver)(@deepseek-ai/dsh-invariants@packages+runtime-diagnostics+invariants)(@deepseek-ai/dsh-settings@packages+settings+settings)(@xterm/xterm@5.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       dsh-client-auto-continue:
-        specifier: 0.3.2
-        version: 0.3.2(@deepseek-ai/dsh-settings@packages+settings+settings)(@deepseek-ai/schemastery@vendor+schemastery)(react@18.3.1)
+        specifier: 0.6.2
+        version: 0.6.2(@deepseek-ai/cordis@vendor+cordis)(@deepseek-ai/dsh-settings@packages+settings+settings)(@deepseek-ai/schemastery@vendor+schemastery)(react@18.3.1)
       dsh-fractal:
         specifier: file:./plugins/dsh-fractal
         version: file:packages/bundle/tinywhale/plugins/dsh-fractal(@deepseek-ai/cordis@vendor+cordis)(@deepseek-ai/dsh-agent-presets@packages+preset+agent-presets)(@deepseek-ai/schemastery@vendor+schemastery)
@@ -12924,10 +12924,12 @@ packages:
       cordis:
         optional: true
 
-  dsh-client-auto-continue@0.3.2:
-    resolution: {integrity: sha512-svQbfED6EzmEWY8onjq/+laCK8M2g8NMhKxCjEyfW8zR2QaN4rT1o7vk3cQnawltp5jdXeHvsmfKu4ek1tO/MQ==}
+  dsh-client-auto-continue@0.6.2:
+    resolution: {integrity: sha512-0E+deI+/J93JbmdHDPURC+86Oc68y+3K2x7rmzUkL3Om1r3ttsV+mer7a3xSTMQypPOsjUMV9SF4Ldmi/UlReg==}
+    hasBin: true
     peerDependencies:
-      '@deepseek-ai/dsh-settings': ^0.1.0-rc.6
+      '@deepseek-ai/cordis': ^4.0.1
+      '@deepseek-ai/dsh-settings': ^0.1.0-rc.7
       '@deepseek-ai/schemastery': ^3.18.1
       react: ^18.2.0
 
@@ -18438,8 +18440,9 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  dsh-client-auto-continue@0.3.2(@deepseek-ai/dsh-settings@packages+settings+settings)(@deepseek-ai/schemastery@vendor+schemastery)(react@18.3.1):
+  dsh-client-auto-continue@0.6.2(@deepseek-ai/cordis@vendor+cordis)(@deepseek-ai/dsh-settings@packages+settings+settings)(@deepseek-ai/schemastery@vendor+schemastery)(react@18.3.1):
     dependencies:
+      '@deepseek-ai/cordis': link:vendor/cordis
       '@deepseek-ai/dsh-settings': link:packages/settings/settings
       '@deepseek-ai/schemastery': link:vendor/schemastery
       react: 18.3.1

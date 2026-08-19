@@ -49,6 +49,24 @@ describe('dsh-tinywhale bundle', () => {
     }
   })
 
+  it('pins auto-continue that registers the keyed plugin settings card', () => {
+    const root = fileURLToPath(new URL('..', import.meta.url))
+    const manifest = JSON.parse(
+      readFileSync(resolve(root, 'package.json'), 'utf8'),
+    ) as { dependencies?: Record<string, string> }
+    const pinned = manifest.dependencies?.['dsh-client-auto-continue']
+    expect(pinned).toMatch(/^\d+\.\d+\.\d+$/)
+    const installed = JSON.parse(
+      readFileSync(resolve(root, 'node_modules/dsh-client-auto-continue/package.json'), 'utf8'),
+    ) as { version: string }
+    expect(installed.version).toBe(pinned)
+    const client = readFileSync(
+      resolve(root, 'node_modules/dsh-client-auto-continue/lib/client.js'),
+      'utf8',
+    )
+    expect(client).toMatch(/name:\s*"settings\.plugin\.item"[\s\S]{0,200}key:\s*SETTINGS_NS/)
+  })
+
   it('registers its explained empty runtime invariant', async () => {
     expect(Object.keys(Tinywhale)).toEqual([])
     expect(TinywhaleInvariant.name).toBe('tinywhale-bundle-invariant')

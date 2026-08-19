@@ -42,7 +42,7 @@
     "@liustack/modlens": "3.9.1",
     "@omdsh-dev/dsh-genui": "github:omdsh-dev/dsh-genui#f75f28621c46ffebf73f368d29c60ab4a83e19b3",
     "dsh-better-sidebar": "file:./plugins/dsh-better-sidebar",
-    "dsh-client-auto-continue": "0.3.2",
+    "dsh-client-auto-continue": "0.6.2",
     "dsh-fractal": "file:./plugins/dsh-fractal",
     "dsh-security-codex": "file:./plugins/dsh-security-codex",
     "dshmarket": "1.0.3"
