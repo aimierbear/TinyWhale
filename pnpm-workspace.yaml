@@ -78,4 +78,4 @@ minimumReleaseAgeExclude:
   - dshmarket@1.0.3
 
 patchedDependencies:
-  node-pty@1.1.0: patches/node-pty@1.1.0.patch
+  node-pty@1.2.0-beta.15: patches/node-pty@1.2.0-beta.15.patch
