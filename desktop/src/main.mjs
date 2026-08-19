@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell, WebContentsView } from 'electron'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { attachOrStartHarness, isHttpReady, stopHarness } from './harness.mjs'
@@ -40,7 +40,7 @@ function createWindow() {
     minHeight: 600,
     show: !SMOKE,
     title: 'TinyWhale',
-    backgroundColor: '#0E2A40',
+    backgroundColor: '#435CDB',
     autoHideMenuBar: true,
     webPreferences: {
       partition: 'persist:tinywhale',
@@ -60,21 +60,91 @@ function createWindow() {
     window.setTitle('TinyWhale')
   })
 
-  window.webContents.setWindowOpenHandler(({ url: target }) => {
+  guardNavigation(window.webContents)
+  return window
+}
+
+function guardNavigation(contents) {
+  contents.setWindowOpenHandler(({ url: target }) => {
     if (!isLocalUrl(target)) {
       void shell.openExternal(target)
     }
     return { action: 'deny' }
   })
-
-  window.webContents.on('will-navigate', (event, target) => {
+  contents.on('will-navigate', (event, target) => {
     if (!isLocalUrl(target)) {
       event.preventDefault()
       void shell.openExternal(target)
     }
   })
+}
 
-  return window
+function fitWebView(window, view) {
+  const { width, height } = window.getContentBounds()
+  view.setBounds({ x: 0, y: 0, width, height })
+}
+
+function setSplashStatus(window, text) {
+  return window.webContents.executeJavaScript(
+    `(() => { const el = document.getElementById('boot-status'); if (el) el.textContent = ${JSON.stringify(text)} })()`,
+  ).catch(() => {})
+}
+
+/**
+ * Keep the splash document on the window. Load the web shell in a hidden
+ * view and reveal it only after plugins settle, so the whale is not torn
+ * down and remounted.
+ */
+async function revealWebWhenReady(window, url) {
+  const view = new WebContentsView({
+    webPreferences: {
+      partition: 'persist:tinywhale',
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+  view.setBackgroundColor('#435CDB')
+  view.setVisible(false)
+  window.contentView.addChildView(view)
+  fitWebView(window, view)
+  const onResize = () => {
+    if (!window.isDestroyed()) fitWebView(window, view)
+  }
+  window.on('resize', onResize)
+  window.once('closed', () => {
+    window.removeListener('resize', onResize)
+  })
+  guardNavigation(view.webContents)
+  view.webContents.on('page-title-updated', event => {
+    event.preventDefault()
+    window.setTitle('TinyWhale')
+  })
+  await setSplashStatus(window, '正在加载插件')
+  const failed = new Promise((_, reject) => {
+    view.webContents.once('did-fail-load', (_event, _code, description) => {
+      reject(new Error(`无法加载界面：${description}`))
+    })
+  })
+  const booted = (async () => {
+    await view.webContents.loadURL(url)
+    const deadline = Date.now() + 120_000
+    while (Date.now() < deadline) {
+      if (view.webContents.isDestroyed()) throw new Error('界面已关闭')
+      try {
+        const state = await view.webContents.executeJavaScript(
+          'document.documentElement.getAttribute("data-dsh-boot")',
+        )
+        if (state === 'ready' || state === 'failed') return
+      } catch {
+        // Document is not executable yet.
+      }
+      await new Promise(resolve => setTimeout(resolve, 50))
+    }
+  })()
+  await Promise.race([booted, failed])
+  fitWebView(window, view)
+  view.setVisible(true)
 }
 
 function focusWindow(window) {
@@ -155,8 +225,12 @@ async function openTinyWhale() {
       focusWindow(window)
     }
     const url = await ensureHarness()
-    await window.loadURL(url)
-    if (!SMOKE) focusWindow(window)
+    if (SMOKE) {
+      await window.loadURL(url)
+      return
+    }
+    await revealWebWhenReady(window, url)
+    focusWindow(window)
   } catch (error) {
     await showStartupFailure(error)
     if (SMOKE) app.exit(1)

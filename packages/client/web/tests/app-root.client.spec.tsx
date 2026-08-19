@@ -10,7 +10,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { act, cleanup, render } from '@testing-library/react'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  document.documentElement.removeAttribute('data-dsh-boot')
+})
 import { AppRoot } from '@deepseek-ai/dsh-client-web/src/AppRoot.tsx'
 import { createLoaderStatusStore, createSignal } from '@deepseek-ai/dsh-client-web/src/loader-status.ts'
 
@@ -33,7 +36,8 @@ function mount() {
 describe('AppRoot', () => {
   it('shows the loading page and never calls renderApp before settled', () => {
     const { queryByTestId, counts, getByText } = mount()
-    expect(getByText('HARNESS')).toBeTruthy()
+    expect(getByText('TinyWhale')).toBeTruthy()
+    expect(getByText('正在加载插件')).toBeTruthy()
     expect(queryByTestId('real-ui')).toBeNull()
     expect(counts()).toBe(0)
   })
@@ -53,7 +57,7 @@ describe('AppRoot', () => {
       status.set('@deepseek-ai/dsh-client-ui-layout', 'failed')
       status.set('ok', 'active')
     })
-    expect(getByText('Failed to load plugins')).toBeTruthy()
+    expect(getByText('插件加载失败')).toBeTruthy()
     expect(getByText('@deepseek-ai/dsh-client-ui-layout')).toBeTruthy()
     expect(queryByTestId('real-ui')).toBeNull()
   })
@@ -61,16 +65,25 @@ describe('AppRoot', () => {
   it('renders the boot failure report even when no entry projected failed', () => {
     const { error, getByText, queryByTestId } = mount()
     act(() => { error.set('web boot: 1 entry did not activate\nx: pending (waiting for service: y)') })
-    expect(getByText('Failed to load plugins')).toBeTruthy()
+    expect(getByText('插件加载失败')).toBeTruthy()
     expect(getByText(/waiting for service/)).toBeTruthy()
     expect(queryByTestId('real-ui')).toBeNull()
+  })
+
+  it('publishes boot state on the document element for the desktop shell', () => {
+    const { settled, error } = mount()
+    expect(document.documentElement.getAttribute('data-dsh-boot')).toBe('loading')
+    act(() => { error.set('boot failed') })
+    expect(document.documentElement.getAttribute('data-dsh-boot')).toBe('failed')
+    act(() => { settled.set(true) })
+    expect(document.documentElement.getAttribute('data-dsh-boot')).toBe('ready')
   })
 
   it('flipping settled switches to the real UI in one pass', () => {
     const { settled, getByTestId, queryByText, counts } = mount()
     act(() => { settled.set(true) })
     expect(getByTestId('real-ui')).toBeTruthy()
-    expect(queryByText('HARNESS')).toBeNull()
+    expect(queryByText('TinyWhale')).toBeNull()
     expect(counts()).toBe(1)
   })
 })

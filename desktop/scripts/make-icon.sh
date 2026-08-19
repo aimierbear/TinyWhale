@@ -27,5 +27,28 @@ sips -z 512 512 "$png" --out "$setdir/icon_512x512.png" >/dev/null
 sips -z 1024 1024 "$png" --out "$setdir/icon_512x512@2x.png" >/dev/null
 iconutil -c icns "$setdir" -o "$icns"
 rm -rf "$setdir"
+
+ICON_PNG="$png" python3 - <<'PY'
+import os
+from pathlib import Path
+from PIL import Image
+png = Path(os.environ['ICON_PNG'])
+im = Image.open(png)
+field = im.getpixel((8, 8))
+mark = im.getpixel((im.size[0] // 2, im.size[1] // 2))
+if not (field[2] > 150 and 40 < field[0] < 130 and field[2] > field[1]):
+    raise SystemExit(f'icon field left the DeepSeek-blue family: {field}')
+if mark[0] < 180 or mark[2] >= mark[0]:
+    raise SystemExit(f'icon mark is not ivory: {mark}')
+cut = Image.open(png.with_name('icon-mark.png'))
+if cut.mode != 'RGBA' or cut.size != (512, 512):
+    raise SystemExit(f'icon-mark.png must be 512 RGBA, got {cut.mode} {cut.size}')
+extrema = cut.getextrema()
+if extrema[3][1] < 200:
+    raise SystemExit('icon-mark.png has no opaque mark')
+PY
+
+cp "$root/resources/icon-mark.png" "$root/../apps/web/public/icon-mark.png"
 echo "wrote $png"
 echo "wrote $icns"
+echo "wrote $root/../apps/web/public/icon-mark.png"

@@ -4,45 +4,168 @@
   <meta charset="utf-8">
   <title>TinyWhale</title>
   <style>
+    :root {
+      --field: #435cdb;
+      --light: #9aa8ee;
+      --depth: #2e3ea8;
+      --ivory: #f2e8d5;
+      --ink: #162058;
+    }
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       height: 100%;
-      background: radial-gradient(120% 80% at 50% 0%, #3d6f8c 0%, #0E2A40 58%, #0A1C2C 100%);
-      color: #F2E8D5;
-      font: 400 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+      overflow: hidden;
+      color: var(--ivory);
+      background: var(--field);
+      font: 400 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
       -webkit-font-smoothing: antialiased;
+      font-feature-settings: "ss01" on, "kern" on;
+    }
+    .sea {
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(72% 46% at 50% -12%, color-mix(in srgb, var(--light) 46%, transparent) 0%, transparent 64%),
+        radial-gradient(100% 70% at 50% 122%, var(--depth) 0%, transparent 56%),
+        radial-gradient(130% 90% at 50% 46%, var(--field) 0%, var(--depth) 100%);
+    }
+    .sea::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(120% 80% at 50% 42%, transparent 48%, rgba(22, 32, 88, 0.26) 100%);
+    }
+    .grain {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.055;
+      mix-blend-mode: overlay;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
     }
     main {
-      min-height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      display: grid;
+      grid-template-rows: minmax(64px, 1fr) auto auto minmax(88px, 24vh);
+      justify-items: center;
     }
-    img {
-      width: 88px;
-      height: 88px;
-      border-radius: 22%;
+    .figure {
+      grid-row: 2;
+      position: relative;
+      width: min(22vw, 188px);
+      transform: translateY(-16px);
+    }
+    .tail {
+      display: block;
+      width: 100%;
+      height: auto;
+      filter: drop-shadow(0 22px 28px rgba(22, 32, 88, 0.2));
+    }
+    .echo {
+      position: absolute;
+      left: 6%;
+      right: 6%;
+      top: 90%;
+      height: 42%;
+      background: url("../resources/icon-mark.png") center / contain no-repeat;
+      transform: scaleY(-1);
+      opacity: 0.13;
+      filter: blur(1px);
+      -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+      pointer-events: none;
+    }
+    .shore {
+      grid-row: 3;
+      width: min(40vw, 272px);
+      margin-top: 28px;
     }
     h1 {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 12px;
       margin: 0;
-      font-size: 22px;
-      font-weight: 560;
-      letter-spacing: 0.01em;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
     }
-    p {
-      margin: 0;
-      opacity: 0.72;
-      font-size: 13px;
+    .gleam {
+      background-image: linear-gradient(
+        105deg,
+        var(--ivory) 0%,
+        var(--ivory) 40%,
+        #fff 50%,
+        var(--ivory) 60%,
+        var(--ivory) 100%
+      );
+      background-size: 220% 100%;
+      background-position: 100% 0;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .status {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      opacity: 0.46;
+    }
+    .ping {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: var(--ivory);
+      vertical-align: 1px;
+      opacity: 0.7;
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .figure { animation: float 8.5s ease-in-out infinite; }
+      .gleam { animation: gleam 3.8s ease-in-out infinite; }
+      .ping { animation: ping 1.6s ease-in-out infinite; }
+      .sea::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(58% 36% at 50% 0%, color-mix(in srgb, var(--light) 22%, transparent), transparent 72%);
+        animation: wash 10s ease-in-out infinite;
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(-16px); }
+        50% { transform: translateY(-21px); }
+      }
+      @keyframes gleam {
+        to { background-position: -120% 0; }
+      }
+      @keyframes ping {
+        50% { opacity: 0.2; transform: scale(0.7); }
+      }
+      @keyframes wash {
+        50% { opacity: 0.5; }
+      }
     }
   </style>
 </head>
 <body>
+  <div class="sea" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
   <main>
-    <img src="../resources/icon.png" alt="">
-    <h1>TinyWhale</h1>
-    <p>正在启动本地引擎…</p>
+    <div class="figure">
+      <img class="tail" src="../resources/icon-mark.png" alt="">
+      <div class="echo"></div>
+    </div>
+    <div class="shore">
+      <h1>
+        <span class="gleam">TinyWhale</span>
+        <span class="status"><span class="ping"></span><span class="gleam" id="boot-status">正在启动本地引擎</span></span>
+      </h1>
+    </div>
   </main>
 </body>
 </html>
