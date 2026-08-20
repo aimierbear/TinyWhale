@@ -17,6 +17,7 @@ afterEach(() => {
   delete win.__DSH_BOOT__
   delete win.__ModuleLoader__
   document.body.innerHTML = ''
+  document.documentElement.removeAttribute('data-dsh-boot')
 })
 
 /** Install the stable facade shape that the Host injects before AppWebEntry runs. */
@@ -45,6 +46,7 @@ async function expectBootFailure(setup: () => void, message: string): Promise<vo
   const entry = new AppWebEntry(container)
   await entry.run()
   expect(container.textContent).toContain(message)
+  expect(document.documentElement.getAttribute('data-dsh-boot')).toBe('failed')
   expect(error).toHaveBeenCalledOnce()
   await entry.dispose()
 }
@@ -130,6 +132,7 @@ describe('plugin activation', () => {
     expect(target.mode).toBe('live')
     expect(events).toEqual(['consumer', 'mount'])
     expect(container.textContent).toBe('mounted')
+    expect(document.documentElement.getAttribute('data-dsh-boot')).toBe('ready')
     await entry.dispose()
   })
 })

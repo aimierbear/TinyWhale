@@ -162,4 +162,20 @@ describe('verifyRuntimeClosure', () => {
     expect(result.workspacePackageCount).toBe(1)
     expect(result.failures).toEqual(['runtime -> @scope/root -> @scope/required'])
   })
+
+  it('skips shipped-preset checks for a desktop deploy manifest', async () => {
+    const root = fixture({
+      'desktop/runtime-root/package.json': {
+        name: 'tinywhale-desktop-runtime',
+        dependencies: { '@scope/root': 'workspace:^' },
+      },
+    })
+    workspace(root, '@scope/root', {})
+
+    const result = await verifyRuntimeClosure(root, 'desktop/runtime-root/package.json')
+
+    expect(result.presetCount).toBe(0)
+    expect(result.workspacePackageCount).toBe(1)
+    expect(result.failures).toEqual([])
+  })
 })
