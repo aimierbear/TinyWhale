@@ -760,7 +760,7 @@ describe('installLlmReplay (through the real LlmRuntime)', () => {
     })
     expect(ctx.llm.providerRetryPolicy('empty')).toMatchObject({
       mode: 'normal',
-      maxRetries: 2,
+      maxRetries: 5,
       initialDelayMs: 500,
       maxDelayMs: 10_000,
       jitterRatio: 0.1,

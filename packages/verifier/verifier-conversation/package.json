@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-verifier-conversation",
   "description": "Conversation-model verifier provider for DeepSeek Harness — scores directed pairs through ctx.llm with request-header inheritance",
-  "version": "0.1.0-rc.7",
+  "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
   },

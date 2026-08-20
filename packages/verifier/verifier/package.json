@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-verifier",
   "description": "Abstract verifier capability seam (ctx.verifier) for the DeepSeek Harness — provider registry, select/compare orchestration, PPT, criteria parsing, and the VerifierError taxonomy",
-  "version": "0.1.0-rc.7",
+  "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
   },

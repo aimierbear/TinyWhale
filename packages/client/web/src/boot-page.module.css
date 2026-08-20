@@ -1,0 +1,190 @@
+/* Boot page is self-contained: theme sheets may not have painted yet.
+   Colors match desktop/src/loading.html so the desktop window stays on
+   one surface from engine start through plugin load. */
+
+.boot {
+  --field: #435cdb;
+  --light: #9aa8ee;
+  --depth: #2e3ea8;
+  --ivory: #f2e8d5;
+  --dsh-boot-arc: 72deg;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  color: var(--ivory);
+  background-color: var(--field);
+  font: 400 13px/1.4 -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sea {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(72% 46% at 50% -12%, color-mix(in srgb, var(--light) 46%, transparent) 0%, transparent 64%),
+    radial-gradient(100% 70% at 50% 122%, var(--depth) 0%, transparent 56%),
+    radial-gradient(130% 90% at 50% 46%, var(--field) 0%, var(--depth) 100%);
+}
+
+.sea::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% 42%, transparent 48%, rgba(22, 32, 88, 0.26) 100%);
+}
+
+.grain {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.055;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+
+.stage {
+  position: relative;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(64px, 1fr) auto auto minmax(88px, 24vh);
+  justify-items: center;
+}
+
+.figure {
+  grid-row: 2;
+  position: relative;
+  width: min(22vw, 188px);
+  transform: translateY(-16px);
+}
+
+.tail {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 22px 28px rgba(22, 32, 88, 0.2));
+}
+
+.echo {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 90%;
+  height: 42%;
+  background: url('/icon-mark.png') center / contain no-repeat;
+  transform: scaleY(-1);
+  opacity: 0.13;
+  filter: blur(1px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 72%);
+  pointer-events: none;
+}
+
+.shore {
+  grid-row: 3;
+  width: min(40vw, 272px);
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.wordmark {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  background-image: linear-gradient(
+    105deg,
+    var(--ivory) 0%,
+    var(--ivory) 40%,
+    #fff 50%,
+    var(--ivory) 60%,
+    var(--ivory) 100%
+  );
+  background-size: 220% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hint {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  opacity: 0.46;
+}
+
+.spinner {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgb(242 232 213 / 18%);
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(var(--ivory) var(--dsh-boot-arc, 72deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 0);
+}
+
+.failed {
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.failedTitle {
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 560;
+  letter-spacing: 0.08em;
+  color: var(--ivory);
+}
+
+.failedItem {
+  font-family: var(--ds-font-family-code, ui-monospace, 'SF Mono', Menlo, Consolas, 'Courier New');
+  font-size: 12px;
+  line-height: 18px;
+  opacity: 0.72;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .figure { animation: float 8.5s ease-in-out infinite; }
+  .wordmark { animation: gleam 3.8s ease-in-out infinite; }
+  .sea::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(58% 36% at 50% 0%, color-mix(in srgb, var(--light) 22%, transparent), transparent 72%);
+    animation: wash 10s ease-in-out infinite;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(-16px); }
+  50% { transform: translateY(-21px); }
+}
+
+@keyframes gleam {
+  to { background-position: -120% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes wash {
+  50% { opacity: 0.5; }
+}
