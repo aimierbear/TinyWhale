@@ -1,7 +1,7 @@
 {
   "name": "@deepseek-ai/dsh-tinywhale",
   "description": "TinyWhale extras bundle: the default community and first-party plugin rows mounted on the web profile after dsh-web-app",
-  "version": "0.1.0-rc.5",
+  "version": "0.1.0-rc.8",
   "publishConfig": {
     "access": "public"
   },

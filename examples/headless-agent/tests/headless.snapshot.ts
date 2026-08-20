@@ -18,6 +18,7 @@ import {
   decompressZstdFrame,
   scanZstdFrames,
 } from '@deepseek-ai/dsh-session-persistence-jsonl/src/zstd.ts'
+import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { describe, expect, it } from 'vitest'
 
 const snapshotsDir = join(dirname(fileURLToPath(import.meta.url)), 'snapshots')
@@ -45,8 +46,13 @@ const credentialsConfigPath = fileURLToPath(new URL('../credentials.cordis.snaps
 const invalidCredentialScenarioDir = join(snapshotsDir, 'invalid-credential')
 const ralphScenarioDir = join(snapshotsDir, 'ralph-loop')
 const ralphConfigPath = fileURLToPath(new URL('../ralph.cordis.snapshot.yml', import.meta.url))
+const verifyScenarioDir = join(snapshotsDir, 'verify-compare')
+const verifySessionFixture = join(verifyScenarioDir, 'session.jsonl')
+const verifyStreamExpected = join(verifyScenarioDir, 'stream-json.expected.jsonl')
+const verifyConfigPath = fileURLToPath(new URL('../verify.cordis.snapshot.yml', import.meta.url))
 const settlementScenarioDir = join(snapshotsDir, 'subagent-settlement')
 const settlementConfigPath = fileURLToPath(new URL('../subagent-settlement.cordis.snapshot.yml', import.meta.url))
+const teamConfigPath = fileURLToPath(new URL('../team.cordis.snapshot.yml', import.meta.url))
 const startupFailureConfigPath = fileURLToPath(new URL('./fixtures/startup-activation-error/cordis.yml', import.meta.url))
 const startupFailureExpected = join(snapshotsDir, 'startup-activation-error', 'stderr.expected.txt')
 const binScript = fileURLToPath(new URL('./fixtures/headless-driver.ts', import.meta.url))
@@ -645,6 +651,85 @@ describe('headless stream-json snapshots', () => {
     expect(normalized).toBe(await readFile(advancedStreamExpected, 'utf8'))
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
+  it('runs a keyless Agent Team with peer mail, dependent tasks, waiting, and Lead aggregation', async () => {
+    let projection: unknown
+    const result = await runLoaderSmoke({
+      label: 'Agent Teams headless snapshot',
+      tempDirPrefix: 'headless-snapshot-agent-team-',
+      binScript,
+      libBinScript: binScript,
+      configPath: teamConfigPath,
+      binArgs: [
+        teamConfigPath,
+        '请明确使用 Agent Teams，把调研和实现拆给两个 teammate，等待完成后汇总。',
+      ],
+      tsconfigPath,
+      processTimeoutMs: 60_000,
+      env: {
+        DSH_SNAPSHOT: 'team',
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      inspect: async (cwd) => {
+        const logs = await persistedLogs(cwd)
+        const parent = logs.find(log => typeof log.header.parentSession !== 'string')
+        if (parent === undefined) throw new Error('Agent Teams snapshot did not persist its Lead')
+        const rows = parseJsonl(parent.content)
+        const members = rows.filter(row => row.type === 'team/member')
+          .map(row => ((row.data as JsonObject).member as JsonObject))
+        const tasks = rows.filter(row => row.type === 'team/task')
+          .map(row => ((row.data as JsonObject).task as JsonObject))
+        const latestTasks = Object.values(Object.fromEntries(tasks.map(task => [String(task.subject), task])))
+        projection = {
+          sessions: logs.length,
+          memberEdges: members.length,
+          activeMembers: members.filter(member => member.phase === 'active').map(member => member.name).sort(),
+          tasks: latestTasks.map(task => ({
+            subject: task.subject,
+            revision: task.revision,
+            status: task.status,
+          })).sort((left, right) => String(left.subject).localeCompare(String(right.subject))),
+          queuedMessages: rows.filter(row => row.type === 'team/message/queued').length,
+          deliveredMessages: rows.filter(row => row.type === 'team/message/delivered').length,
+          waited: rows.some(row => row.type === 'tool/call'
+            && (row.data as JsonObject).name === 'wait_agent'),
+          checkedRoster: rows.some(row => row.type === 'tool/call'
+            && (row.data as JsonObject).name === 'list_agents'),
+        }
+      },
+    })
+    expect(result.stderr).toBe('')
+    expect(parseJsonl(result.stdout).at(-1)).toMatchObject({
+      type: 'result',
+      output: 'TEAM_WORKFLOW_OK: both teammates and dependent tasks completed.',
+    })
+    expect(projection).toMatchInlineSnapshot(`
+      {
+        "activeMembers": [
+          "implementer",
+          "researcher",
+        ],
+        "checkedRoster": true,
+        "deliveredMessages": 2,
+        "memberEdges": 4,
+        "queuedMessages": 2,
+        "sessions": 3,
+        "tasks": [
+          {
+            "revision": 3,
+            "status": "completed",
+            "subject": "Implementation",
+          },
+          {
+            "revision": 3,
+            "status": "completed",
+            "subject": "Research",
+          },
+        ],
+        "waited": true,
+      }
+    `)
+  }, 75_000)
+
   it('replays persisted goal tools through the one-shot app', async () => {
     const prompt = await scenarioPrompt(goalScenarioDir, 'goal-tools')
     const streamExpected = join(goalScenarioDir, 'stream-json.expected.jsonl')
@@ -778,6 +863,56 @@ describe('headless stream-json snapshots', () => {
     const normalized = normalizeHeadlessStream(result.stdout, runCwd)
     if (refreshing) await writeFile(streamExpected, normalized)
     expect(normalized).toBe(await readFile(streamExpected, 'utf8'))
+  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
+
+  it('replays a verify compare with its nested verifier call in log order', async () => {
+    const prompt = await scenarioPrompt(verifyScenarioDir, 'verify-compare')
+    const script = deriveReplayScript(parseSessionLog(await readFile(verifySessionFixture, 'utf8')))
+    expect(script).toHaveLength(3)
+    let runCwd = ''
+    const result = await runLoaderSmoke({
+      label: 'verify compare headless stream-json snapshot',
+      tempDirPrefix: 'headless-snapshot-verify-compare-',
+      binScript,
+      libBinScript: binScript,
+      configPath: verifyConfigPath,
+      binArgs: [verifyConfigPath, prompt],
+      tsconfigPath,
+      env: {
+        DSH_SNAPSHOT: 'replay',
+        DSH_SNAPSHOT_FILE: verifySessionFixture,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      prepare: (cwd) => { runCwd = cwd },
+      inspect: async (cwd) => {
+        const logs = await persistedLogs(cwd)
+        expect(logs).toHaveLength(1)
+        const records = parseJsonl(logs[0]?.content ?? '')
+        const calls = records.filter(record => record.type === 'tool/call')
+        expect(calls.map(record => (record.data as JsonObject | undefined)?.name)).toEqual(['verify'])
+        const nested = records.filter(record => record.type === 'verifier/call')
+        expect(nested).toHaveLength(1)
+        expect(nested[0]?.data).toMatchObject({
+          providerId: 'conversation',
+          pair: [0, 1],
+          criterionId: 'contract',
+          repetition: 0,
+          ok: true,
+        })
+        const resultRecord = records.find(record => record.type === 'tool/result')
+        const resultData = resultRecord?.data as JsonObject | undefined
+        const message = resultData?.message as JsonObject | undefined
+        const content = message?.content as JsonObject[] | undefined
+        expect(content?.[0]?.isError).toBe(false)
+        expect(JSON.stringify(content?.[0]?.content)).toContain('Winner A')
+        expect(JSON.stringify(content?.[0]?.content)).toContain('contract')
+      },
+    })
+
+    expect(result.stderr).toBe('')
+    const normalized = normalizeHeadlessStream(result.stdout, runCwd)
+    if (refreshing) await writeFile(verifyStreamExpected, normalized)
+    expect(normalized).toBe(await readFile(verifyStreamExpected, 'utf8'))
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
   it('delivers a continuable child result without parent polling', async () => {

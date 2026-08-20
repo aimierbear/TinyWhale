@@ -9,7 +9,9 @@
     "src/checkout.ts",
     "src/index.ts",
     "src/invariant.ts",
-    "src/types.ts"
+    "src/types.ts",
+    "src/overlay.ts",
+    "src/rebrand.ts"
   ],
   "references": [
     {

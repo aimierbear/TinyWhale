@@ -18,6 +18,9 @@
       "path": "../../compaction/compaction"
     },
     {
+      "path": "../../verifier/verifier"
+    },
+    {
       "path": "../../llm/llm"
     },
     {

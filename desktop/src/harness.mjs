@@ -286,7 +286,8 @@ export async function attachOrStartHarness(options = {}) {
   }
 
   const launch = resolveHarnessLaunch({ env, repoRoot: root, home: options.home, runtimeRoot })
-  const child = spawn(launch.command, [...launch.args, 'web', '--port', String(port)], {
+  // Electron is the UI; without --no-open, dsh web also opens the default browser.
+  const child = spawn(launch.command, [...launch.args, 'web', '--no-open', '--port', String(port)], {
     cwd: launch.cwd,
     env: { ...env },
     stdio: ['ignore', 'pipe', 'pipe'],

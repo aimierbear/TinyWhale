@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
 import {
+  attachOrStartHarness,
+  findFreeHarnessPort,
   findOnPath,
   harnessUrl,
   isHttpReady,
@@ -13,6 +15,7 @@ import {
   resolveHarnessLaunch,
   resolveRepoRoot,
   shouldAttachToReadyOrigin,
+  stopHarness,
   waitForHttp,
 } from '../src/harness.mjs'
 
@@ -221,4 +224,39 @@ test('resolveHarnessLaunch falls back to apps/cli source with a real Node', () =
   assert.equal(launch.command, nodePath)
   assert.deepEqual(launch.args, ['--import', 'tsx/esm', sourceBin])
   assert.equal(launch.cwd, dir)
+})
+
+test('attachOrStartHarness starts dsh web without opening a browser', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tinywhale-no-open-'))
+  const argvFile = join(dir, 'argv.json')
+  const bin = join(dir, 'dsh')
+  writeFileSync(bin, `#!${process.execPath}
+const { createServer } = require('node:http')
+const { writeFileSync } = require('node:fs')
+writeFileSync(${JSON.stringify(argvFile)}, JSON.stringify(process.argv.slice(2)))
+const port = Number(process.argv[process.argv.indexOf('--port') + 1])
+createServer((_request, response) => {
+  response.writeHead(200)
+  response.end('ok')
+}).listen(port, '127.0.0.1')
+`)
+  chmodSync(bin, 0o755)
+  const port = await findFreeHarnessPort('127.0.0.1', 34080)
+  const session = await attachOrStartHarness({
+    port,
+    env: { PATH: '', TINYWHALE_DSH_BIN: bin },
+    repoRoot: dir,
+    home: dir,
+  })
+  try {
+    assert.equal(session.attached, false)
+    assert.deepEqual(JSON.parse(readFileSync(argvFile, 'utf8')), [
+      'web',
+      '--no-open',
+      '--port',
+      String(session.port),
+    ])
+  } finally {
+    stopHarness(session.child)
+  }
 })
