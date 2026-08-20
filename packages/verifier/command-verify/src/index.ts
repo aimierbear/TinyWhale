@@ -113,10 +113,10 @@ function submitWinner(invocation: CommandInvocation, task: string, winner: Verif
   }))
 }
 
-/** Append an immediately visible verification-started message to the chat surface. */
+/** Append the invoked command line to the chat surface so the user sees their input immediately. */
 function submitStarted(invocation: CommandInvocation, task: string): void {
   invocation.agent.session.append('user/message', createUserMessage({
-    content: [{ type: 'text', text: `[Verification started] ${task}` }],
+    content: [{ type: 'text', text: `/verify ${task}` }],
     source: { kind: 'plugin', plugin: 'dsh-command-verify' },
   }), { surfaceOp: 'append' })
 }

@@ -22,7 +22,7 @@ Human-facing `/verify` command over `ctx.subagents` and `ctx.verifier`. The comm
 
 #### What the model sees
 
-The command input and direct status/error output are absent from model requests. When a command is dispatched, one immediately visible `user/message` placeholder `[Verification started] <task>` is appended to the chat surface before candidate subagents start. When candidate selection finishes, a follow-up user message `Best verified result for: <task>` plus the selected result wakes the model. On failure, a follow-up user message `Verification failed for: <task>` plus the failure detail wakes the model instead, so the conversation never stops silently. Both follow-ups are ordinary `user/message` events and replay from the session log.
+The command input and direct status/error output are absent from model requests. When a command is dispatched, the invoked line `/verify <task>` is appended to the chat surface as an immediately visible `user/message` before candidate subagents start. When candidate selection finishes, a follow-up user message `Best verified result for: <task>` plus the selected result wakes the model. On failure, a follow-up user message `Verification failed for: <task>` plus the failure detail wakes the model instead, so the conversation never stops silently. Both follow-ups are ordinary `user/message` events and replay from the session log.
 
 #### Token effect
 
