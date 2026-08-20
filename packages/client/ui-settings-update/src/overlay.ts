@@ -5,20 +5,15 @@
  * both sides changed. Settings update restores these from the pre-merge HEAD
  * after `git merge --no-commit`, covering upstream-only edits too.
  *
- * Kernel files that mix branding with harness behavior stay off this list
- * (`boot-page`, theme tokens, profile templates, generated catalogs).
+ * README, LICENSE, and the web index are not overlayed: they absorb
+ * upstream text, then a rebrand pass restamps product name and clone URL.
  * @module @deepseek-ai/dsh-client-ui-settings-update
  */
 
 /** Repository-relative overlay entries. A trailing slash marks a directory. */
 export const TINYWHALE_OVERLAY_PATHS = [
-  'README.md',
-  'README.zh.md',
-  'README.i18n.yaml',
-  'LICENSE',
   'NOTICE',
   'TINYWHALE.md',
-  'apps/web/index.html',
   'apps/web/public/icon-mark.png',
   'desktop/',
   'packages/bundle/tinywhale/',

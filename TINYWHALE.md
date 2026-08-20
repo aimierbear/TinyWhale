@@ -13,25 +13,27 @@ TinyWhale is the public product name of this repository. It is a fork of [DeepSe
 
 ## Syncing upstream
 
-Loopback Settings → General → **软件更新** / **Software update** on a git checkout fetches and merges the configured upstream remote. The button refuses a dirty or detached tree, restores the overlay paths below from the pre-merge HEAD, aborts on any remaining conflict, and installs from `pnpm-lock.yaml` when that file changed. A packaged app (`TINYWHALE_PACKAGED=1`) does not merge git: the same row opens the GitHub Releases page. Restart TinyWhale afterward; the running `dsh web` process does not reload itself. Electron shows the same row because it loads the Web Settings UI. The Dock/dev app (`desktop` `npm run pack && npm run install:dev`) stamps this checkout into `Contents/Resources/tinywhale-checkout.json` and starts `apps/cli/src/bin.ts` unless `/tinywhale/status` is already answering; `pnpm build` must have produced host `lib/` and the web frontend, or that spawn exits before the UI is ready.
+Loopback Settings → General → **软件更新** / **Software update** on a git checkout fetches and merges the configured upstream remote. The button refuses a dirty or detached tree, restores TinyWhale-only overlay paths from the pre-merge HEAD, takes upstream on README/LICENSE/index conflicts then restamps branding, aborts on any remaining conflict, and installs from `pnpm-lock.yaml` when that file changed. A packaged app (`TINYWHALE_PACKAGED=1`) does not merge git: the same row opens the GitHub Releases page. Restart TinyWhale afterward; the running `dsh web` process does not reload itself. Electron shows the same row because it loads the Web Settings UI. The Dock/dev app (`desktop` `npm run pack && npm run install:dev`) stamps this checkout into `Contents/Resources/tinywhale-checkout.json` and starts `apps/cli/src/bin.ts` unless `/tinywhale/status` is already answering; `pnpm build` must have produced host `lib/` and the web frontend, or that spawn exits before the UI is ready.
 
-From a terminal, use the same overlay merge (do not run a raw `git merge`; that still takes upstream-only edits to branding files):
+From a terminal, use the same merge (do not run a raw `git merge`):
 
 ```sh
 git remote add upstream https://github.com/deepseek-ai/deepseek-harness.git
 pnpm run merge-upstream
 ```
 
-### Overlay (TinyWhale keeps these on every upstream merge)
+### Overlay (keep ours)
 
-Git cannot mark a path as "never take theirs": a merge driver only runs when both sides changed. The update path therefore restores these paths after `git merge --no-commit`:
+TinyWhale-only trees that upstream should not own. Restored from the pre-merge HEAD after `git merge --no-commit`. List: [`src/overlay.ts`](packages/client/ui-settings-update/src/overlay.ts).
 
-- `README.md`, `README.zh.md`, `README.i18n.yaml`
-- `LICENSE`, `NOTICE`, `TINYWHALE.md`
-- `apps/web/index.html`, `apps/web/public/icon-mark.png`
+- `NOTICE`, `TINYWHALE.md`, `apps/web/public/icon-mark.png`
 - `desktop/`
 - `packages/bundle/tinywhale/`
 - `packages/client/ui-settings-update/`
 - `packages/verifier/`
 
-The list lives in [`packages/client/ui-settings-update/src/overlay.ts`](packages/client/ui-settings-update/src/overlay.ts). Paths that mix branding with harness behavior stay off it and still merge: `packages/client/web/src/boot-page.ts`, theme tokens, `packages/boot/app-boot/src/profile.ts`, generated catalogs, `THIRD_PARTY_NOTICES.md`. Keep harness behavior from upstream in those files unless a TinyWhale change owns the hunk.
+### Rebrand (take upstream, restamp TinyWhale)
+
+Root README, `LICENSE`, and `apps/web/index.html` mix harness docs with product name. Freezing them would drop upstream how-to changes (`--no-open`, new sections). The update path takes the merged/upstream file and runs [`src/rebrand.ts`](packages/client/ui-settings-update/src/rebrand.ts): keep unknown headings, rewrite clone URL and community, insert packaged/desktop sections if missing, set the window title.
+
+Kernel files that still mix branding with behavior merge by hand: `packages/client/web/src/boot-page.ts`, theme tokens, `packages/boot/app-boot/src/profile.ts`, generated catalogs.

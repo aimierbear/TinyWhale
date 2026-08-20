@@ -11,6 +11,9 @@ import {
   DEFAULT_UPSTREAM_BRANCH, DEFAULT_UPSTREAM_REMOTE, DEFAULT_UPSTREAM_URL,
 } from './types.ts'
 import { isTinyWhaleOverlayPath, TINYWHALE_OVERLAY_PATHS, overlayGitPath } from './overlay.ts'
+import {
+  applyTinyWhaleRebrand, isTinyWhaleRebrandPath, TINYWHALE_REBRAND_THEIRS_PATHS,
+} from './rebrand.ts'
 
 /** Resolved Host config for one checkout. */
 export interface TinyWhaleUpdateConfig {
@@ -120,7 +123,7 @@ let applying = false
 /**
  * Fetch the configured upstream remote and merge it into the current branch.
  * After the merge, restore {@link TINYWHALE_OVERLAY_PATHS} from the pre-merge
- * HEAD so branding files stay TinyWhale even when only upstream edited them.
+ * HEAD, take upstream on README/LICENSE/index conflicts, then rebrand those.
  * @param startPath - discovery start (the Host plugin module path).
  * @param config - resolved remote/branch.
  * @param signal - RPC cancellation.
@@ -227,7 +230,8 @@ async function resolveRemoteRef(
 
 /**
  * Merge `ref`, restore TinyWhale overlay paths from `before`, and finish the
- * commit. Overlay-only conflicts keep ours; any other unmerged path aborts.
+ * commit. Overlay-only conflicts keep ours. README/LICENSE/index take
+ * upstream then rebrand. Any other unmerged path aborts.
  * @param run - Git runner.
  * @param root - Checkout root.
  * @param ref - Remote-tracking ref to merge.
@@ -263,14 +267,25 @@ async function mergeUpstreamKeepingOverlay(
   const unmerged = (await gitText(run, root, ['diff', '--name-only', '--diff-filter=U'], signal))
     .split('\n')
     .filter(path => path !== '')
-  const leftover = unmerged.filter(path => !isTinyWhaleOverlayPath(path))
+  const rebrandTheirs = unmerged.filter(path =>
+    (TINYWHALE_REBRAND_THEIRS_PATHS as readonly string[]).includes(path))
+  if (rebrandTheirs.length > 0) {
+    await gitText(run, root, ['checkout', '--theirs', '--', ...rebrandTheirs], signal)
+  }
+  const leftover = unmerged.filter(path =>
+    !isTinyWhaleOverlayPath(path) && !isTinyWhaleRebrandPath(path))
   if (leftover.length > 0) {
     await gitOk(run, root, ['merge', '--abort'], signal)
     return classifyMergeFailure(mergeError ?? new Error(`CONFLICT ${leftover.join(' ')}`))
   }
-  if (unmerged.length > 0) {
-    await gitText(run, root, ['checkout', '--ours', '--', ...unmerged], signal)
-    await gitText(run, root, ['add', '--', ...unmerged], signal)
+  const overlayUnmerged = unmerged.filter(path => isTinyWhaleOverlayPath(path))
+  if (overlayUnmerged.length > 0) {
+    await gitText(run, root, ['checkout', '--ours', '--', ...overlayUnmerged], signal)
+    await gitText(run, root, ['add', '--', ...overlayUnmerged], signal)
+  }
+  const rebranded = applyTinyWhaleRebrand(root)
+  if (rebranded.length > 0) {
+    await gitText(run, root, ['add', '--', ...rebranded], signal)
   }
   if (merging) {
     await gitText(run, root, ['commit', '--no-edit'], signal)

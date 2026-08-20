@@ -46,8 +46,9 @@ function commitFile(dir: string, name: string, body: string, message: string): v
 
 describe('isTinyWhaleOverlayPath', () => {
   it('matches files and directory prefixes from the overlay list', () => {
-    expect(isTinyWhaleOverlayPath('README.md')).toBe(true)
-    expect(isTinyWhaleOverlayPath('apps/web/index.html')).toBe(true)
+    expect(isTinyWhaleOverlayPath('TINYWHALE.md')).toBe(true)
+    expect(isTinyWhaleOverlayPath('README.md')).toBe(false)
+    expect(isTinyWhaleOverlayPath('apps/web/index.html')).toBe(false)
     expect(isTinyWhaleOverlayPath('desktop/src/main.mjs')).toBe(true)
     expect(isTinyWhaleOverlayPath('packages/verifier/tool-verifier/package.json')).toBe(true)
     expect(isTinyWhaleOverlayPath('packages/client/web/src/boot-page.ts')).toBe(false)
@@ -224,16 +225,16 @@ describe('applyTinyWhaleUpdate', () => {
     const upstream = join(tmp, 'upstream')
     const local = join(tmp, 'local')
     initRepo(upstream)
-    write(join(upstream, 'README.md'), 'tinywhale\n')
-    git(upstream, ['add', 'README.md'])
+    write(join(upstream, 'TINYWHALE.md'), 'tinywhale\n')
+    git(upstream, ['add', 'TINYWHALE.md'])
     git(upstream, ['commit', '-m', 'overlay'])
     clone(upstream, local)
     git(local, ['remote', 'rename', 'origin', 'upstream'])
-    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
+    commitFile(upstream, 'TINYWHALE.md', 'deepseek\n', 'upstream-overlay')
     commitFile(upstream, 'other.txt', 'new\n', 'upstream-other')
     const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
     expect(result).toEqual({ outcome: 'updated', installed: false })
-    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:TINYWHALE.md'], { encoding: 'utf8' }))
       .toBe('tinywhale\n')
     expect(execFileSync('git', ['-C', local, 'show', 'HEAD:other.txt'], { encoding: 'utf8' }))
       .toBe('new\n')
@@ -264,23 +265,69 @@ describe('applyTinyWhaleUpdate', () => {
     const upstream = join(tmp, 'upstream')
     const local = join(tmp, 'local')
     initRepo(upstream)
-    write(join(upstream, 'README.md'), 'base\n')
-    git(upstream, ['add', 'README.md'])
-    git(upstream, ['commit', '-m', 'readme'])
+    write(join(upstream, 'TINYWHALE.md'), 'base\n')
+    git(upstream, ['add', 'TINYWHALE.md'])
+    git(upstream, ['commit', '-m', 'overlay'])
     clone(upstream, local)
     git(local, ['remote', 'rename', 'origin', 'upstream'])
-    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
+    commitFile(upstream, 'TINYWHALE.md', 'deepseek\n', 'upstream-overlay')
     commitFile(upstream, 'file.txt', 'upstream\n', 'upstream-file')
-    commitFile(local, 'README.md', 'tinywhale\n', 'local-readme')
+    commitFile(local, 'TINYWHALE.md', 'tinywhale\n', 'local-overlay')
     commitFile(local, 'file.txt', 'local\n', 'local-file')
     const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
     expect(result.outcome).toBe('conflict')
     expect(execFileSync('git', ['-C', local, 'status', '--porcelain'], { encoding: 'utf8' }).trim())
       .toBe('')
-    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:TINYWHALE.md'], { encoding: 'utf8' }))
       .toBe('tinywhale\n')
     expect(execFileSync('git', ['-C', local, 'show', 'HEAD:file.txt'], { encoding: 'utf8' }))
       .toBe('local\n')
+  })
+
+  it('rebrands upstream README instead of freezing the TinyWhale copy', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-rebrand-readme-'))
+    const upstream = join(tmp, 'upstream')
+    const local = join(tmp, 'local')
+    initRepo(upstream)
+    write(join(upstream, 'README.md'), `# DeepSeek Harness
+
+## Run
+
+Pass --no-open-old.
+
+\`\`\`sh
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+cd deepseek-harness
+\`\`\`
+`)
+    git(upstream, ['add', 'README.md'])
+    git(upstream, ['commit', '-m', 'readme'])
+    clone(upstream, local)
+    git(local, ['remote', 'rename', 'origin', 'upstream'])
+    commitFile(local, 'README.md', `# TinyWhale
+
+## Run
+
+old fork text
+`, 'fork-readme')
+    commitFile(upstream, 'README.md', `# DeepSeek Harness
+
+## Run
+
+Pass --no-open-new.
+
+\`\`\`sh
+git clone https://github.com/deepseek-ai/deepseek-harness.git
+cd deepseek-harness
+\`\`\`
+`, 'upstream-readme')
+    const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
+    expect(result).toEqual({ outcome: 'updated', installed: false })
+    const readme = execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' })
+    expect(readme).toContain('# TinyWhale')
+    expect(readme).toContain('Pass --no-open-new')
+    expect(readme).toContain('aimierbear/TinyWhale.git')
+    expect(readme).not.toContain('old fork text')
   })
 
   it('keeps overlay files when both sides edited them', async () => {
@@ -288,16 +335,16 @@ describe('applyTinyWhaleUpdate', () => {
     const upstream = join(tmp, 'upstream')
     const local = join(tmp, 'local')
     initRepo(upstream)
-    write(join(upstream, 'README.md'), 'base\n')
-    git(upstream, ['add', 'README.md'])
-    git(upstream, ['commit', '-m', 'readme'])
+    write(join(upstream, 'TINYWHALE.md'), 'base\n')
+    git(upstream, ['add', 'TINYWHALE.md'])
+    git(upstream, ['commit', '-m', 'overlay'])
     clone(upstream, local)
     git(local, ['remote', 'rename', 'origin', 'upstream'])
-    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
-    commitFile(local, 'README.md', 'tinywhale\n', 'local-readme')
+    commitFile(upstream, 'TINYWHALE.md', 'deepseek\n', 'upstream-overlay')
+    commitFile(local, 'TINYWHALE.md', 'tinywhale\n', 'local-overlay')
     const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
     expect(result).toEqual({ outcome: 'updated', installed: false })
-    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:TINYWHALE.md'], { encoding: 'utf8' }))
       .toBe('tinywhale\n')
   })
 
