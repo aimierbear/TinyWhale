@@ -113,6 +113,31 @@ function submitWinner(invocation: CommandInvocation, task: string, winner: Verif
   }))
 }
 
+/** Append an immediately visible verification-started message to the chat surface. */
+function submitStarted(invocation: CommandInvocation, task: string): void {
+  invocation.agent.session.append('user/message', createUserMessage({
+    content: [{ type: 'text', text: `[Verification started] ${task}` }],
+    source: { kind: 'plugin', plugin: 'dsh-command-verify' },
+  }), { surfaceOp: 'append' })
+}
+
+/** Post a verification failure to chat so a failed command never leaves the conversation frozen. */
+function submitFailure(invocation: CommandInvocation, task: string, detail: string): void {
+  invocation.agent.followup(createUserMessage({
+    content: [{
+      type: 'text',
+      text: `Verification failed for: ${task}\n\n${detail}`,
+    }],
+    source: { kind: 'user' },
+  }))
+}
+
+/** Surface a failure in chat and return it as the command result. */
+function failVerify(invocation: CommandInvocation, task: string, detail: string): CommandResult {
+  submitFailure(invocation, task, detail)
+  return { kind: 'error', text: detail }
+}
+
 /** Run one `/verify` invocation through candidate generation and selection. */
 async function executeVerify(
   ctx: Context,
@@ -123,24 +148,25 @@ async function executeVerify(
   if (task === undefined) return { kind: 'error', text: USAGE }
 
   using callDeadline = deadline(invocation.signal, config.timeoutMs, VERIFY_COMMAND_TIMEOUT_CODE)
+  submitStarted(invocation, task)
 
   const runs: SubagentRun[] = []
-  const startResults = await Promise.allSettled(
-    Array.from({ length: config.trials }, (_, index) => ctx.subagents.start(config.provider, {
-      label: `verify candidate ${index + 1}`,
-      prompt: [{ type: 'text', text: task }],
-      parent: invocation.agent,
-      signal: callDeadline.signal,
-    })),
-  )
-  for (const started of startResults) {
-    if (started.status === 'fulfilled') runs.push(started.value)
-  }
-  if (runs.length === 0) {
-    return { kind: 'error', text: `All ${config.trials} candidate attempts failed to start.` }
-  }
-
   try {
+    const startResults = await Promise.allSettled(
+      Array.from({ length: config.trials }, (_, index) => ctx.subagents.start(config.provider, {
+        label: `verify candidate ${index + 1}`,
+        prompt: [{ type: 'text', text: task }],
+        parent: invocation.agent,
+        signal: callDeadline.signal,
+      })),
+    )
+    for (const started of startResults) {
+      if (started.status === 'fulfilled') runs.push(started.value)
+    }
+    if (runs.length === 0) {
+      return failVerify(invocation, task, `All ${config.trials} candidate attempts failed to start.`)
+    }
+
     const settled = await Promise.allSettled(runs.map(run => run.result))
     const results: SubagentResult[] = settled.map((outcome) => {
       if (outcome.status === 'fulfilled') return outcome.value
@@ -155,17 +181,23 @@ async function executeVerify(
       text: actionText(result),
     }))
 
-    if (candidates.length === 0) return { kind: 'error', text: 'No candidate attempts settled.' }
+    if (candidates.length === 0) {
+      return failVerify(invocation, task, 'No candidate attempts settled.')
+    }
     if (candidates.length === 1) {
       const only = candidates[0]
-      if (only === undefined) return { kind: 'error', text: 'No candidate attempts settled.' }
+      if (only === undefined) {
+        return failVerify(invocation, task, 'No candidate attempts settled.')
+      }
       submitWinner(invocation, task, only)
       return { kind: 'success', text: 'Only one candidate attempt settled; submitted its result.' }
     }
 
     const actions = candidates.map(candidate => candidate.text)
     const first = candidates[0]
-    if (first === undefined) return { kind: 'error', text: 'No candidate attempts settled.' }
+    if (first === undefined) {
+      return failVerify(invocation, task, 'No candidate attempts settled.')
+    }
     let winner = first
     let selectedBy = 'verifier tournament'
     if (config.majorityVoting) {
@@ -196,6 +228,12 @@ async function executeVerify(
       kind: 'success',
       text: `Selected best of ${candidates.length} candidate attempts via ${selectedBy}; submitted the winner to the conversation.`,
     }
+  } catch (error: unknown) {
+    if (invocation.signal.aborted) {
+      submitFailure(invocation, task, 'The verification was cancelled.')
+      return { kind: 'error', text: 'Verification cancelled.' }
+    }
+    return failVerify(invocation, task, error instanceof Error ? error.message : String(error))
   } finally {
     await Promise.allSettled(runs.map(run => run.dispose()))
   }

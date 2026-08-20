@@ -133,12 +133,13 @@ describe('command-verify', () => {
     expect(JSON.stringify(agent.followup.mock.calls[0]?.[0])).toContain('only answer')
   })
 
-  it('fails when every candidate start is rejected', async () => {
+  it('fails when every candidate start is rejected and posts the failure to chat', async () => {
     const provider = new StubSubagentProvider('spawn', [])
     provider.failStarts = 2
     const { ctx, agent } = await mount(provider, verifierProvider(), { trials: 2 })
     const execution = await ctx.commands.execute(agent, '/verify cannot start', [], new AbortController().signal)
     expect(execution?.result).toMatchObject({ kind: 'error', text: expect.stringContaining('failed to start') })
-    expect(agent.followup).not.toHaveBeenCalled()
+    expect(agent.followup).toHaveBeenCalledOnce()
+    expect(JSON.stringify(agent.followup.mock.calls[0]?.[0])).toContain('Verification failed')
   })
 })

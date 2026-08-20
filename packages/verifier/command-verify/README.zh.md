@@ -22,7 +22,7 @@
 
 #### 模型看到什么
 
-命令输入和直接的状态/错误输出不会进入模型请求。候选选择完成后，模型看到一条普通用户消息：文本 `Best verified result for: <task>` 后接被选中的候选结果。该消息是 `user/message`，并像其他用户轮次一样从会话日志重放。
+命令输入和直接的状态/错误输出不会进入模型请求。命令派发时，聊天表面会立即追加一条可见的 `user/message` 占位 `[Verification started] <task>`，随后才启动候选子代理。候选选择完成后，一条 `Best verified result for: <task>` 加所选结果的后续用户消息唤醒模型。失败时，一条 `Verification failed for: <task>` 加失败详情的后续用户消息同样唤醒模型，因此会话不会无声停止。这两条后续消息都是普通 `user/message` 事件，并从会话日志重放。
 
 #### Token 影响
 
