@@ -2,7 +2,7 @@
 
 English | [中文](verifier.zh.md)
 
-The verifier capability — a [capability seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md) that ranks or compares candidate trajectories: Service Definition ([dsh-verifier](../../packages/verifier/verifier), `ctx.verifier`), Service Provider ([dsh-verifier-conversation](../../packages/verifier/verifier-conversation)), and Consumer ([dsh-tool-verifier](../../packages/verifier/tool-verifier), the `verify` tool). Verifier is an optional capability, not part of the agent-loop spine.
+The verifier capability — a [capability seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md) that ranks or compares candidate trajectories: Service Definition ([dsh-verifier](../../packages/verifier/verifier), `ctx.verifier`), Service Provider ([dsh-verifier-conversation](../../packages/verifier/verifier-conversation)), and Consumer ([dsh-tool-verifier](../../packages/verifier/tool-verifier), the `verify` tool). The human `/verify` command lives in [dsh-command-verify](../../packages/verifier/command-verify). Verifier is an optional capability, not part of the agent-loop spine.
 
 Source: [`packages/verifier/verifier/src/types.ts`](../../packages/verifier/verifier/src/types.ts)
 
@@ -61,6 +61,8 @@ interface VerifierCallEventData {
   readonly rawOutput: readonly ContentBlock[]
   /** False when the nested stream finished as a failure or threw. */
   readonly ok: boolean
+  /** True when a successful call scored either slot as the 0.5 text fallback. */
+  readonly fallback?: boolean
   readonly usage?: TokenUsage
 }
 ```
@@ -111,5 +113,5 @@ async select( agent: VerifierContext, request: VerifierSelectRequest, signal?: A
 async compare( agent: VerifierContext, request: VerifierCompareRequest, signal?: AbortSignal, ): Promise<VerifierCompareResult>
 ```
 
-Source: [`packages/verifier/verifier/src/index.ts:103`](../../packages/verifier/verifier/src/index.ts)
+Source: [`packages/verifier/verifier/src/index.ts:106`](../../packages/verifier/verifier/src/index.ts)
 <!-- END GENERATED cordis-surface -->

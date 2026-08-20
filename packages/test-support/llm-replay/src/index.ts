@@ -1,9 +1,10 @@
 /**
  * Keyless snapshot-test LLM replay. It derives one model-call script per
- * recorded session from `assistant/chunk` events and explicitly marked local
- * compaction calls, then binds fresh live sessions to parent/child scripts by
- * first-call order. Throw and hang cases require an explicit override because
- * a session log cannot reconstruct them alone.
+ * recorded session from `assistant/chunk` events, explicitly marked local
+ * compaction calls, and `verifier/call` nested scoring events, then binds
+ * fresh live sessions to parent/child scripts by first-call order. Throw and
+ * hang cases require an explicit override because a session log cannot
+ * reconstruct them alone.
  * @module @deepseek-ai/dsh-llm-replay
  */
 
@@ -31,8 +32,9 @@ import { LlmAdapter, LlmError, ReasoningEffortId, assertNever, resolveRetryPolic
 /**
  * One recorded model call. `throw` may replay prefix chunks before failing;
  * `hang` models cancellation. Derived chunk entries come from ordinary model
- * streams and complete outputs of explicitly marked local compaction calls;
- * an override sidecar can supply any variant.
+ * streams, complete outputs of explicitly marked local compaction calls, and
+ * `verifier/call` nested scoring events; an override sidecar can supply any
+ * variant.
  */
 export type ReplayEntry =
   | { kind: 'chunks'; chunks: StreamChunk[] }

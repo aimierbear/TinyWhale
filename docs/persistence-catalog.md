@@ -1008,7 +1008,7 @@ Source: [`packages/core/session/src/types.ts:264`](../packages/core/session/src/
 'verifier/call': VerifierCallEventData
 ```
 
-Source: [`packages/verifier/verifier/src/types.ts:151`](../packages/verifier/verifier/src/types.ts)
+Source: [`packages/verifier/verifier/src/types.ts:153`](../packages/verifier/verifier/src/types.ts)
 
 ### `web/*`
 

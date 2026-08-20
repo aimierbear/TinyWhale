@@ -79,10 +79,14 @@ describe('bradley-terry and ranking', () => {
     expect(bradleyTerry(0.4, 0.4)).toBe(0.5)
   })
 
-  it('picks the higher index when means are equal', () => {
+  it('picks the lower index when means are equal', () => {
     expect(rankingFromTotals([1, 1], [2, 2])).toMatchObject({
-      selectedIndex: 1,
+      selectedIndex: 0,
       ranking: [0, 1],
+    })
+    expect(rankingFromTotals([1, 1, 1], [2, 2, 2])).toMatchObject({
+      selectedIndex: 0,
+      ranking: [0, 1, 2],
     })
   })
 

@@ -297,6 +297,7 @@ export class ConversationVerifierProvider implements VerifierProvider {
       rB: scoreB.value,
       blocks,
       letters,
+      fallback: scoreA.fallback || scoreB.fallback,
       ...usage !== undefined ? { usage } : {},
     }
   }
@@ -317,6 +318,7 @@ export class ConversationVerifierProvider implements VerifierProvider {
       sampledLetters: letters,
       rawOutput: streamed.blocks,
       ok: streamed.ok,
+      ...streamed.ok && streamed.fallback ? { fallback: true } : {},
       ...streamed.usage !== undefined ? { usage: streamed.usage } : {},
     })
   }
@@ -329,6 +331,7 @@ type StreamedScore =
     readonly rB: number
     readonly blocks: readonly ContentBlock[]
     readonly letters: readonly string[]
+    readonly fallback: boolean
     readonly usage?: TokenUsage
   }
   | {

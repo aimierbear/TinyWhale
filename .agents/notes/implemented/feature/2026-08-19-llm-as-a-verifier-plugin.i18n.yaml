@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md
-2026-08-19-llm-as-a-verifier-plugin.md: dc5e5ffd1f310a65bc45b4a71a21511afbb59db4
-2026-08-19-llm-as-a-verifier-plugin.zh.md: 0352f6266154f0dbf2961d07d2d5e91619ea2f85
+2026-08-19-llm-as-a-verifier-plugin.md: 0d67513e72ebcd6994c489d3442777a3fa359535
+2026-08-19-llm-as-a-verifier-plugin.zh.md: 4db01564465c907108d403816d7e64169efe94d7

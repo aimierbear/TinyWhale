@@ -160,6 +160,8 @@ flowchart LR
   cfg --> plugin_dsh_base_verifier_conversation
   plugin_dsh_base_tool_verifier["tool-verifier<br/>@deepseek-ai/dsh-tool-verifier"]
   cfg --> plugin_dsh_base_tool_verifier
+  plugin_dsh_base_command_verify["command-verify<br/>@deepseek-ai/dsh-command-verify"]
+  cfg --> plugin_dsh_base_command_verify
   plugin_dsh_base_tools["tools<br/>@deepseek-ai/dsh-tools"]
   cfg --> plugin_dsh_base_tools
   plugin_dsh_base_system_prompt["system-prompt<br/>@deepseek-ai/dsh-system-prompt"]
@@ -250,6 +252,7 @@ flowchart LR
 | `verifier` | `@deepseek-ai/dsh-verifier` |
 | `verifier-conversation` | `@deepseek-ai/dsh-verifier-conversation` |
 | `tool-verifier` | `@deepseek-ai/dsh-tool-verifier` |
+| `command-verify` | `@deepseek-ai/dsh-command-verify` |
 | `tools` | `@deepseek-ai/dsh-tools` |
 | `system-prompt` | `@deepseek-ai/dsh-system-prompt` |
 | `agent-loop` | `@deepseek-ai/dsh-agent-loop` |

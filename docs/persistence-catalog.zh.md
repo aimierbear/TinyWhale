@@ -1010,7 +1010,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'verifier/call': VerifierCallEventData
 ```
 
-来源：[`packages/verifier/verifier/src/types.ts:149`](../packages/verifier/verifier/src/types.ts)
+来源：[`packages/verifier/verifier/src/types.ts:153`](../packages/verifier/verifier/src/types.ts)
 
 ### `web/*`
 

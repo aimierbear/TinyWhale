@@ -188,10 +188,13 @@ describe('ConversationVerifierProvider', () => {
     const calls = sessionAgent.session.events.filter(event => event.type === 'verifier/call')
     expect(calls.length).toBeGreaterThanOrEqual(2)
     expect(calls.every(event => event.data.ok)).toBe(true)
-    const first = adapter.requests[0]
-    const swapped = adapter.requests.find((request, index) => index > 0 && request.messages !== first?.messages)
+    const prompts = adapter.requests.map((request) => {
+      const block = request.messages[0]?.content[0]
+      return block?.type === 'text' ? block.text : ''
+    })
     expect(scores.calls).toBeGreaterThanOrEqual(2)
-    expect(swapped ?? first).toBeDefined()
+    expect(prompts.some(text => text.includes('**Trajectory A:**\ntrace A'))).toBe(true)
+    expect(prompts.some(text => text.includes('**Trajectory A:**\ntrace B'))).toBe(true)
   })
 
   it('omits maxTokens when maxScoreTokens is 0 and sets it when pinned', async () => {
@@ -242,7 +245,8 @@ describe('ConversationVerifierProvider', () => {
       seed: 0,
     })
     expect(result.calls).toBeGreaterThan(0)
-    expect(result.ranking.every(row => row.score >= 0)).toBe(true)
+    expect(result.ranking.every(row => row.score === 0.5)).toBe(true)
+    expect(result.selectedId).toBe('a')
   })
 
   it('aborts in-flight jobs on a raise-class failure', async () => {
@@ -485,12 +489,44 @@ describe('ConversationVerifierProvider', () => {
     expect(scores.get('0,1')).toMatchObject({ rA: 0, rB: 0, calls: 0 })
   })
 
+  it('records fallback: true when score tags are missing', async () => {
+    const adapter = new ScriptedAdapter([[
+      { type: 'text-delta', index: 0, text: 'no tags here' },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ]])
+    const ctx = await mount(adapter, { maxAttempts: 1 })
+    const sessionAgent = agentWithHeader()
+    const result = await ctx.verifier.compare(sessionAgent, {
+      problem: 'task',
+      candidates: [pairRequest.candidates[0]!, pairRequest.candidates[1]!],
+      criteria: pairRequest.criteria,
+      groundTruthNote: '',
+      nEvaluations: 1,
+    })
+    expect(result.rA).toBe(0.5)
+    expect(result.rB).toBe(0.5)
+    const call = sessionAgent.session.events.find(event => event.type === 'verifier/call')
+    expect(call?.type === 'verifier/call' ? call.data.fallback : undefined).toBe(true)
+    expect(call?.type === 'verifier/call' ? call.data.ok : undefined).toBe(true)
+  })
+
   it('cancels in-flight work after a raise-class failure', async () => {
     class SlowErrorAdapter extends LlmAdapter {
       override async * stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
-        yield { type: 'finish', reason: { kind: 'error', failure: { code: 'X', message: 'fail-one' } } }
-        void options
+        if (this.started === 0) {
+          this.started += 1
+          yield { type: 'finish', reason: { kind: 'error', failure: { code: 'X', message: 'fail-one' } } }
+          return
+        }
+        this.started += 1
+        await new Promise<void>((_resolve, reject) => {
+          options.signal?.addEventListener('abort', () => {
+            reject(options.signal.reason instanceof Error ? options.signal.reason : new Error('aborted'))
+          }, { once: true })
+        })
       }
+
+      started = 0
     }
     const ctx = new Context()
     await ctx.plugin(LlmRuntime)

@@ -88,6 +88,9 @@ describe('parseVerifyArgs', () => {
   })
 
   it('derives model-visible cost prose from resolved config', () => {
+    expect(tool.DEFAULT_VERIFY_TIMEOUT_MS).toBe(3_600_000)
+    expect(buildVerifyDescription({ ...config, timeoutMs: tool.DEFAULT_VERIFY_TIMEOUT_MS }))
+      .toContain('up to 60 minutes')
     expect(buildVerifyDescription(config)).toContain('select ranks 2..6 candidates')
     expect(buildVerifyDescription(config)).toContain('Default n_evaluations is 2')
     expect(buildVerifyDescription({ ...config, maxCandidates: 3, defaultNEvaluations: 1, timeoutMs: 60_000 }))
@@ -236,6 +239,8 @@ describe('verify tool', () => {
       n_evaluations: 1,
     }, { agent: undefined })
     expect(missing.isError).toBe(true)
+    if (!missing.isError) throw new Error('expected error')
+    expect(missing.error.info?.code).toBe('VERIFIER_NO_AGENT')
 
     const result = await execute(ctx, {
       mode: 'compare',

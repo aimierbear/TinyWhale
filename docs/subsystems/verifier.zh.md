@@ -2,7 +2,7 @@
 
 [English](verifier.md) | 中文
 
-验证器能力——一个[能力 seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md)，用于给候选轨迹排序或比较：Service Definition（[dsh-verifier](../../packages/verifier/verifier)，`ctx.verifier`）、Service Provider（[dsh-verifier-conversation](../../packages/verifier/verifier-conversation)）和 Consumer（[dsh-tool-verifier](../../packages/verifier/tool-verifier)，`verify` 工具）。验证器是可选能力，不是 agent-loop 主干的一部分。
+验证器能力——一个[能力 seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md)，用于给候选轨迹排序或比较：Service Definition（[dsh-verifier](../../packages/verifier/verifier)，`ctx.verifier`）、Service Provider（[dsh-verifier-conversation](../../packages/verifier/verifier-conversation)）和 Consumer（[dsh-tool-verifier](../../packages/verifier/tool-verifier)，`verify` 工具）。面向用户的 `/verify` 命令在 [dsh-command-verify](../../packages/verifier/command-verify)。验证器是可选能力，不是 agent-loop 主干的一部分。
 
 来源：[`packages/verifier/verifier/src/types.ts`](../../packages/verifier/verifier/src/types.ts)
 
@@ -61,6 +61,8 @@ interface VerifierCallEventData {
   readonly rawOutput: readonly ContentBlock[]
   /** False when the nested stream finished as a failure or threw. */
   readonly ok: boolean
+  /** True when a successful call scored either slot as the 0.5 text fallback. */
+  readonly fallback?: boolean
   readonly usage?: TokenUsage
 }
 ```
@@ -111,5 +113,5 @@ async select( agent: VerifierContext, request: VerifierSelectRequest, signal?: A
 async compare( agent: VerifierContext, request: VerifierCompareRequest, signal?: AbortSignal, ): Promise<VerifierCompareResult>
 ```
 
-Source: [`packages/verifier/verifier/src/index.ts:103`](../../packages/verifier/verifier/src/index.ts)
+Source: [`packages/verifier/verifier/src/index.ts:106`](../../packages/verifier/verifier/src/index.ts)
 <!-- END GENERATED cordis-surface -->

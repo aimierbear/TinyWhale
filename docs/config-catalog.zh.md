@@ -513,12 +513,10 @@ export interface Config {
   readonly seed?: number
   /** Skip the tournament when a strict majority of candidates agree verbatim. */
   readonly majorityVoting?: boolean
-  /** End-to-end deadline for the whole `/verify` command. */
-  readonly timeoutMs?: number
 }
 ```
 
-来源：[`packages/verifier/command-verify/src/index.ts:39`](../packages/verifier/command-verify/src/index.ts)
+来源：[`packages/verifier/command-verify/src/index.ts:35`](../packages/verifier/command-verify/src/index.ts)
 
 <a id="deepseek-aidsh-compaction-basic"></a>
 
@@ -1328,7 +1326,7 @@ export interface ReplayModelConfig {
 
 依赖：[`ModelModality`](../packages/llm/llm/src/index.ts) · [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts)
 
-来源：[`packages/test-support/llm-replay/src/index.ts:776`](../packages/test-support/llm-replay/src/index.ts)
+来源：[`packages/test-support/llm-replay/src/index.ts:833`](../packages/test-support/llm-replay/src/index.ts)
 
 <a id="deepseek-aidsh-llm-retry"></a>
 
@@ -2955,7 +2953,7 @@ export interface Config {
 }
 ```
 
-来源：[`packages/verifier/tool-verifier/src/index.ts:56`](../packages/verifier/tool-verifier/src/index.ts)
+来源：[`packages/verifier/tool-verifier/src/index.ts:60`](../packages/verifier/tool-verifier/src/index.ts)
 
 <a id="deepseek-aidsh-tool-web"></a>
 

@@ -36,13 +36,14 @@ The upstream repository is the reference implementation. Every package that cont
 
 ### Capability seam and packages
 
-A new `packages/verifier/` group holds the three roles.
+A new `packages/verifier/` group holds the three seam roles plus the human command.
 
 | Package | Role | Contents |
 | --- | --- | --- |
 | `@deepseek-ai/dsh-verifier` | Service Definition | `ctx.verifier`: provider registry, provider selection, `select`/`compare` orchestration, budget check, errors, `pivot-tournament.ts`, criteria parsing and bundled criteria |
 | `@deepseek-ai/dsh-verifier-conversation` | Service Provider | `scorePairs()` through `ctx.llm` with conversation-target inheritance, prompt assembly, sampled score parsing, prefix warming, concurrency |
 | `@deepseek-ai/dsh-tool-verifier` | Consumer | `verify` tool schema, argument validation, defaults, render and presentation |
+| `@deepseek-ai/dsh-command-verify` | Consumer | Human `/verify` command: parallel subagent trials, majority vote or PPT, submit winner |
 
 Dependency topology: `dsh-verifier` peers on `cordis`, `dsh-llm`, and `dsh-session`; `dsh-verifier-conversation` peers on `cordis`, `dsh-verifier`, `dsh-llm`, `dsh-session`, and `dsh-timeout`; `dsh-tool-verifier` peers on `cordis`, `dsh-tools`, `dsh-verifier`, and `dsh-llm`. Each package mirrors every peer in `devDependencies`, depends on `schemastery` where it declares `Config`, and ships `src/invariant.ts` with the standard `./invariant` export.
 
@@ -95,6 +96,7 @@ interface VerifierPairsRequest {
   groundTruthNote: string
   nEvaluations: number
   onError: 'raise' | 'tie'
+  swapOddRepetitions: boolean
 }
 
 interface PairwiseScore {
@@ -105,6 +107,8 @@ interface PairwiseScore {
     rA: number
     rB: number
   }[]
+  calls: number
+  usage?: TokenUsage
 }
 
 interface VerifierProvider {
@@ -141,6 +145,7 @@ interface VerifierCallEventData {
   sampledLetters: readonly string[]
   rawOutput: readonly ContentBlock[]
   ok: boolean
+  fallback?: boolean
   usage?: TokenUsage
 }
 
@@ -164,13 +169,13 @@ export const VERIFIER_PROVIDER_CONVERSATION = 'conversation'
 
 `select` resolves the directed pairs from the ported PPT and requests only those pairs. Pair keys are candidate index pairs `a,b`, so the runtime never depends on model-supplied id spelling. `select` passes `onError` from provider config. `compare` requests the single directed pair `[0, 1]` with `onError: 'raise'`, matching upstream `compare()`, and returns raw rewards in candidate order; the tool maps A/B slot letters to those indexes. The tool passes `exec.agent` directly as `VerifierContext`; `Agent.options` supplies the `options` fallback structurally.
 
-PPT pair generation stays exactly upstream, including `k = min(pivots, N)` and the directed pairs its pivot rounds may repeat. Duplicate directed pairs are upstream weighting semantics, not a porting bug; changing them would break golden parity. For two candidates the tool description steers to `compare`, because `select` over N=2 repeats ring edges.
+PPT pair generation stays exactly upstream, including `k = min(pivots, N)` and the directed pairs its pivot rounds may repeat. Duplicate directed pairs are upstream weighting semantics, not a porting bug; changing them would break golden parity. `select`/`compare` reject non-integer or `< 1` `pivots` and `nEvaluations` before the budget check. Final ranking accumulates ring and pivot-round scores together (upstream's cached-run semantics). `selectedIndex` and `ranking[0]` both break exact ties by lower index, matching upstream `max(range(n), key=lambda i: (mean, -i))`. For two candidates the tool description steers to `compare`, because `select` over N=2 repeats ring edges.
 
 ### Algorithm without logprobs
 
 Each scoring job builds the upstream prompt for one criterion and one directed pair, streams one `ctx.llm` request, assembles text blocks only, and runs `extractScore` with no logprob arguments. That returns one sampled A-T letter, normalized to `[0, 1]`. Repeating `nEvaluations` times and averaging per criterion gives a Monte Carlo expectation that converges to the upstream logprob expectation in distribution, at the cost of more calls. `select` pair jobs swap prompt slots on odd repetitions exactly as `score_directed_pairs` does, so slot bias cancels within each directed comparison. `compare` keeps candidate order for every repetition, exactly as upstream `compare()` does.
 
-Nested calls do not go through the agent-loop retry path. `dsh-llm-retry` listens to `agent/request-error`, while a hand-built call reaches `llm/stream` only. The provider therefore makes up to `maxAttempts` attempts per nested job (default `2`, one retry after the first terminal `error`, `aborted`, or thrown stream) before mapping `VERIFIER_LLM_FAILED` or the configured tie; a per-call deadline from `@deepseek-ai/dsh-timeout` bounds each attempt and every attempt counts toward `calls`. Invalid parsed text follows upstream semantics and reads as `0.5` with a warning, never as a thrown error. `FinishReason` is merge-extensible, so unknown finish kinds fall through a documented default branch that treats them as failures.
+Nested calls do not go through the agent-loop retry path. `dsh-llm-retry` listens to `agent/request-error`, while a hand-built call reaches `llm/stream` only. The provider therefore makes up to `maxAttempts` attempts per nested job (default `2`, one retry after the first terminal `error`, `aborted`, or thrown stream) before mapping `VERIFIER_LLM_FAILED` or the configured tie; a per-call deadline from `@deepseek-ai/dsh-timeout` bounds each attempt and every attempt counts toward `calls`. Invalid parsed text follows upstream semantics and reads as `0.5`; the nested `verifier/call` records `fallback: true` instead of throwing. `FinishReason` is merge-extensible, so unknown finish kinds fall through a documented default branch that treats them as failures.
 
 The `seed` contract is DSH-internal determinism: the ported ring uses a TypeScript PRNG seeded from the value. The parity fixture does not rely on cross-language `seed` equality; it uses a fixed golden ring and score map produced once by the upstream Python implementation and committed as JSON.
 
@@ -208,7 +213,7 @@ The output schema has one `oneOf` branch per mode. The `select` branch returns `
 
 `presentCall` is a generic card with title `verify <mode>: <problem truncated to 80 characters>` and raw input limited to candidate ids and counts. `presentResult` is a generic card carrying the same summary as the model result. `presentationMeta` persists only compact fields (`kind`, `selectedId`, `ranking`, `winner`, `calls`), never candidate text.
 
-The tool declares no `isConcurrencySafe`, so calls are exclusive ordering barriers: all later model tool calls in the same step wait for `verify` to finish, up to `timeoutMs`. `timeoutMs` defaults to 1440000 and is aligned with the provider worst case `ceil(maxCalls / maxConcurrency) * perCallTimeoutMs = 12 * 120000`; the model sees this waiting cost in the tool description.
+The tool declares no `isConcurrencySafe`, so calls are exclusive ordering barriers: all later model tool calls in the same step wait for `verify` to finish, up to `timeoutMs`. `timeoutMs` defaults to 3600000 and is aligned with `(ceil(maxCalls / maxConcurrency) + 3) * maxAttempts * perCallTimeoutMs = 15 * 2 * 120000`, covering ring then pivot, each split into warm/rest, plus one retry; the model sees this waiting cost in the tool description.
 
 ### Configuration
 
@@ -244,7 +249,7 @@ All deployment-varying values are validated plugin config with defaults.
 | `maxCandidates` | `6` | Upper bound on one ranking; with default criteria and evaluations, 6 candidates cost 90 calls under `maxCalls: 96` |
 | `maxCandidateChars` | `20000` | Per-candidate text cap |
 | `maxTotalChars` | `60000` | Sum cap across one call |
-| `timeoutMs` | `1440000` | Tool-level budget aligned with `ceil(maxCalls / maxConcurrency) * perCallTimeoutMs` |
+| `timeoutMs` | `3600000` | Tool-level budget aligned with `(ceil(maxCalls / maxConcurrency) + 3) * maxAttempts * perCallTimeoutMs` |
 
 The call budget is computed before any request: `(N + k(N-k) + C(k,2)) * criteriaCount * nEvaluations` for `select`, with `k = min(pivots, N)`, and `criteriaCount * nEvaluations` for `compare`. Exceeding `maxCalls` throws `VERIFIER_BUDGET_EXCEEDED` with the counts and the field to reduce.
 
@@ -254,11 +259,11 @@ The call budget is computed before any request: `(N + k(N-k) + C(k,2)) * criteri
 
 ### Composition, tests, and rollout
 
-`dsh-base` mounts `verifier`, `verifier-conversation`, and `tool-verifier`; no user configuration is required, and the only row-level pin is `maxScoreTokens: 32768` on `verifier-conversation` for the shipped route. `packages/bundle/base/package.json` adds all three as `workspace:^` dependencies, including the SD itself, because the SD is a mounted bare row. `examples/package.json` adds the same three packages as `workspace:*` for the snapshot overlay.
+`dsh-base` mounts `verifier`, `verifier-conversation`, `tool-verifier`, and `command-verify`; no user configuration is required, and the only row-level pin is `maxScoreTokens: 32768` on `verifier-conversation` for the shipped route. `packages/bundle/base/package.json` adds those packages as `workspace:^` dependencies, including the SD itself, because the SD is a mounted bare row. `examples/package.json` adds the three seam packages as `workspace:*` for the snapshot overlay.
 
 Repository wiring: `packages/README.md` gains the group entry; the group gains bilingual `packages/verifier/README.md`; `docs/subsystems/verifier.md`, its Chinese counterpart, and the pairing sidecar are created; `scripts/gen-doc-graphs.ts` gains the `verifier` seam entry; `tsconfig.base.json` gains the `packages/verifier/*/src` and `packages/verifier/*/src/invariant.ts` candidates; `tsconfig.host.json` gains the three package references. `@deepseek-ai/dsh-llm` gains `purpose: 'verification'` with no DeepSeek thinking change. Generated tool, config, and persistence catalogs update through `doc-sync`; `packages/core/tools/tests/gen-tool-catalog.spec.ts` adds `verify` to its expected tool list. `SessionEventMap` gains `verifier/call`; the TypeScript SDK snapshot replays unchanged (4/4), and the Python single-exe snapshot scenarios do not mount the verifier seam, so their expected outputs contain no reference to the new event. The Python rerun is owned by the `python-runtime` CI job and was not executable locally without the built single-exe artifact.
 
-Each completed nested call appends a log-only `verifier/call` session event, declared in `dsh-verifier` and recorded before the enclosing `tool/result`: provider id, exact route, directed pair, criterion id, repetition, sampled letters, `rawOutput`, `ok`, and usage. A thrown or failed nested stream records `ok: false` so llm-replay reconstructs an error finish instead of a successful stop. `@deepseek-ai/dsh-llm-replay` derives a replay entry from that event at its log position, exactly like its `compaction/summary` branch. Ranking is auditable from the session log, and the keyless snapshot needs no override surgery.
+Each completed nested call appends a log-only `verifier/call` session event, declared in `dsh-verifier` and recorded before the enclosing `tool/result`: provider id, exact route, directed pair, criterion id, repetition, sampled letters, `rawOutput`, `ok`, optional `fallback`, and usage. A thrown or failed nested stream records `ok: false` so llm-replay reconstructs an error finish instead of a successful stop. `@deepseek-ai/dsh-llm-replay` derives a replay entry from that event at its log position, exactly like its `compaction/summary` branch. Ranking is auditable from the session log, and the keyless snapshot needs no override surgery.
 
 Unit tests port upstream edge cases as fixtures: scale mapping, tag parsing including `>A` fused tokens and last-tag-wins, PPT pair counts and tie breaking, slot swap, and prefix grouping. A golden fixture committed as JSON contains one fixed ring and score map produced by the upstream Python implementation; the TS `select` test compares ranking, scores, and comparison count against that fixture only. Provider tests use a scripted `LlmAdapter` and assert conversation-target inheritance, sampling, usage aggregation, signal forwarding, retry, per-call deadline, failure mapping, and the cancellation convergence of in-flight nested calls. The all-equal `selectedId: null` rendering and the `winner: 'tie'` rendering are covered.
 
@@ -291,7 +296,7 @@ The assembled headless keyless snapshot at `examples/headless-agent/tests/snapsh
 ## Consequences
 
 - **No logprobs means sampled scores.** Each nested call draws one letter instead of reading the full token distribution; the estimate is noisier. `nEvaluations` defaults to 2 and the tool reports the call count, but calibration on non-Terminal-Bench tasks is unproven.
-- **Cost and blocking.** A default `select` over three candidates with three criteria and two repetitions makes 36 nested calls; the default budget allows up to 90 calls for six candidates. The exclusive barrier can hold later same-step tool calls for up to the 24-minute `timeoutMs`; the tool description states this and the provider keeps cancellation cooperative.
+- **Cost and blocking.** A default `select` over three candidates with three criteria and two repetitions makes 36 nested calls; the default budget allows up to 90 calls for six candidates. The exclusive barrier can hold later same-step tool calls for up to the 60-minute `timeoutMs`; the tool description states this and the provider keeps cancellation cooperative.
 - **Context tax.** Candidate text is model-visible tool-call input and persists in the session log, so a full 60 KiB call is resent with history until compaction. The description tells the model to paste only necessary evidence. Reference-form candidates (file path or subagent session id) are deferred to v2.
 - **Deliberate API deviations.** The tool defaults to bundled `terminal_bench` criteria and `n_evaluations: 2`, while upstream requires `criteria` and defaults `n_evaluations` to 4. `onError` defaults to `'raise'` where upstream `select` defaults to `'tie'`. These are Terminal-Bench-2.1 and fail-loud choices, documented in the tool description and config table.
 - **Prompt deviation.** The inserted untrusted-data sentence is the only deliberate change to the upstream prompt; its position and text are locked by a prompt snapshot test.

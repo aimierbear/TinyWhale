@@ -36,13 +36,14 @@ harness 交付一个 `verifier` 能力接缝。其默认 provider 把上游的�
 
 ### 能力接缝与包
 
-新 `packages/verifier/` 组承载三个角色。
+新 `packages/verifier/` 组承载三个 seam 角色，外加面向用户的命令。
 
 | 包 | 角色 | 内容 |
 | --- | --- | --- |
 | `@deepseek-ai/dsh-verifier` | Service Definition | `ctx.verifier`：provider 注册表、provider 选择、`select`/`compare` 编排、预算检查、错误、`pivot-tournament.ts`、准则解析和内置准则 |
 | `@deepseek-ai/dsh-verifier-conversation` | Service Provider | 通过 `ctx.llm` 实现 `scorePairs()`，含对话目标继承、prompt 组装、采样分解析、前缀预热和并发控制 |
 | `@deepseek-ai/dsh-tool-verifier` | Consumer | `verify` 工具 schema、参数校验、默认值、渲染和展示 |
+| `@deepseek-ai/dsh-command-verify` | Consumer | 面向用户的 `/verify` 命令：并行子代理尝试、多数投票或 PPT，提交获胜结果 |
 
 依赖拓扑：`dsh-verifier` peer 依赖 `cordis`、`dsh-llm`、`dsh-session`；`dsh-verifier-conversation` peer 依赖 `cordis`、`dsh-verifier`、`dsh-llm`、`dsh-session`、`dsh-timeout`；`dsh-tool-verifier` peer 依赖 `cordis`、`dsh-tools`、`dsh-verifier`、`dsh-llm`。每个包在 `devDependencies` 中镜像全部 peer；声明 `Config` 的包依赖 `schemastery`；每个包都带 `src/invariant.ts` 和标准 `./invariant` export。
 
@@ -95,6 +96,7 @@ interface VerifierPairsRequest {
   groundTruthNote: string
   nEvaluations: number
   onError: 'raise' | 'tie'
+  swapOddRepetitions: boolean
 }
 
 interface PairwiseScore {
@@ -105,6 +107,8 @@ interface PairwiseScore {
     rA: number
     rB: number
   }[]
+  calls: number
+  usage?: TokenUsage
 }
 
 interface VerifierProvider {
@@ -141,6 +145,7 @@ interface VerifierCallEventData {
   sampledLetters: readonly string[]
   rawOutput: readonly ContentBlock[]
   ok: boolean
+  fallback?: boolean
   usage?: TokenUsage
 }
 
@@ -164,13 +169,13 @@ export const VERIFIER_PROVIDER_CONVERSATION = 'conversation'
 
 `select` 用移植后的 PPT 解析定向对，并且只请求这些对。对的键是候选下标 `a,b`，因此 runtime 不依赖模型给出的 id 拼写。`select` 从 provider 配置传 `onError`。`compare` 只请求 `[0, 1]` 一个定向对，且 `onError: 'raise'`，与上游 `compare()` 一致，并按候选顺序返回原始奖励；工具把 A/B 槽位字母映射回这两个下标。工具把 `exec.agent` 直接作为 `VerifierContext` 传入；`Agent.options` 在结构上提供 `options` 兜底。
 
-PPT 对生成与上游完全一致，包括 `k = min(pivots, N)` 以及 pivot rounds 可能重复出现的定向对。重复定向对是上游的加权语义，不是移植 bug；改动它会破坏 golden 奇偶校验。对于两个候选，工具描述引导使用 `compare`，因为 N=2 的 `select` 会重复 ring 边。
+PPT 对生成与上游完全一致，包括 `k = min(pivots, N)` 以及 pivot rounds 可能重复出现的定向对。重复定向对是上游的加权语义，不是移植 bug；改动它会破坏 golden 奇偶校验。`select`/`compare` 在预算检查前拒绝非整数或 `< 1` 的 `pivots` 和 `nEvaluations`。最终排名把 ring 与 pivot-round 分数一并累计（对应上游写了缓存时的语义）。`selectedIndex` 与 `ranking[0]` 在并列时都取更低下标，与上游 `max(range(n), key=lambda i: (mean, -i))` 一致。对于两个候选，工具描述引导使用 `compare`，因为 N=2 的 `select` 会重复 ring 边。
 
 ### 无 logprobs 时的算法
 
 每个评分任务按上游 prompt 构建一个准则、一个定向对的请求，流式执行一次 `ctx.llm` 请求，只汇总文本块，并以无 logprob 参数调用 `extractScore`。这样得到一次采样的 A-T 字母，归一化到 `[0, 1]`。按准则重复 `nEvaluations` 次并取平均，得到蒙特卡洛期望，在分布意义上收敛到上游的 logprob 期望，代价是更多调用。`select` 的对任务在奇数次重复时与 `score_directed_pairs` 一样交换 prompt 槽位，从而在每个定向比较内部抵消槽位偏差。`compare` 的每次重复都保持候选顺序，与上游 `compare()` 一致。
 
-嵌套调用不经过 agent-loop 的重试路径。`dsh-llm-retry` 监听的是 `agent/request-error`，而手工调用只经过 `llm/stream`。因此 provider 对每个嵌套任务最多尝试 `maxAttempts` 次（默认 `2`，即首次终止 `error`、`aborted` 或抛出的流之后重试一次），随后才映射 `VERIFIER_LLM_FAILED` 或配置的 tie；每次尝试由 `@deepseek-ai/dsh-timeout` 的逐调用 deadline 约束，且每次尝试都计入 `calls`。解析失败的文本沿用上游语义，按 `0.5` 计并告警，不作为抛出错误。`FinishReason` 是 merge-extensible 联合，未知 finish kind 落入文档化的默认分支并按失败处理。
+嵌套调用不经过 agent-loop 的重试路径。`dsh-llm-retry` 监听的是 `agent/request-error`，而手工调用只经过 `llm/stream`。因此 provider 对每个嵌套任务最多尝试 `maxAttempts` 次（默认 `2`，即首次终止 `error`、`aborted` 或抛出的流之后重试一次），随后才映射 `VERIFIER_LLM_FAILED` 或配置的 tie；每次尝试由 `@deepseek-ai/dsh-timeout` 的逐调用 deadline 约束，且每次尝试都计入 `calls`。解析失败的文本沿用上游语义，按 `0.5` 计；嵌套 `verifier/call` 记录 `fallback: true`，而不是抛错。`FinishReason` 是 merge-extensible 联合，未知 finish kind 落入文档化的默认分支并按失败处理。
 
 `seed` 契约是 DSH 内部确定性：移植后的 ring 使用由该值播种的 TypeScript PRNG。奇偶校验夹具不依赖跨语言的 `seed` 相等；它使用由上游 Python 实现一次性生成并提交为 JSON 的固定 ring 和分数映射。
 
@@ -208,7 +213,7 @@ provider 在前缀预热波次之后最多运行 `maxConcurrency` 个嵌套流�
 
 `presentCall` 是 generic 卡片，标题为 `verify <mode>: <problem 截断到 80 字符>`，原始输入只含候选 id 与数量。`presentResult` 是 generic 卡片，展示与模型结果相同的摘要。`presentationMeta` 只持久化紧凑字段（`kind`、`selectedId`、`ranking`、`winner`、`calls`），绝不持久化候选文本。
 
-工具不声明 `isConcurrencySafe`，因此调用是独占排序屏障：同一步内排在其后的模型工具调用全部等待，最长到 `timeoutMs`。`timeoutMs` 默认 1440000，与 provider 最坏情况 `ceil(maxCalls / maxConcurrency) * perCallTimeoutMs = 12 * 120000` 对齐；模型在工具描述中看到这一等待成本。
+工具不声明 `isConcurrencySafe`，因此调用是独占排序屏障：同一步内排在其后的模型工具调用全部等待，最长到 `timeoutMs`。`timeoutMs` 默认 3600000，与 `(ceil(maxCalls / maxConcurrency) + 3) * maxAttempts * perCallTimeoutMs = 15 * 2 * 120000` 对齐，覆盖 ring 然后 pivot、各自的 warm/rest 拆分，以及一次重试；模型在工具描述中看到这一等待成本。
 
 ### 配置
 
@@ -244,7 +249,7 @@ provider 在前缀预热波次之后最多运行 `maxConcurrency` 个嵌套流�
 | `maxCandidates` | `6` | 一次排名候选数上限；默认准则与重复次数下，6 个候选花费 90 次调用，低于 `maxCalls: 96` |
 | `maxCandidateChars` | `20000` | 单个候选文本上限 |
 | `maxTotalChars` | `60000` | 单次调用总和上限 |
-| `timeoutMs` | `1440000` | 工具级预算，与 `ceil(maxCalls / maxConcurrency) * perCallTimeoutMs` 对齐 |
+| `timeoutMs` | `3600000` | 工具级预算，与 `(ceil(maxCalls / maxConcurrency) + 3) * maxAttempts * perCallTimeoutMs` 对齐 |
 
 调用预算在任何请求发出前计算：`select` 为 `(N + k(N-k) + C(k,2)) * criteriaCount * nEvaluations`，其中 `k = min(pivots, N)`；`compare` 为 `criteriaCount * nEvaluations`。超过 `maxCalls` 抛出 `VERIFIER_BUDGET_EXCEEDED`，并给出计数和应当减小的字段。
 
@@ -254,11 +259,11 @@ provider 在前缀预热波次之后最多运行 `maxConcurrency` 个嵌套流�
 
 ### 组合、测试与落地
 
-`dsh-base` 挂载 `verifier`、`verifier-conversation` 和 `tool-verifier`；用户无需任何配置，唯一的 row 级固定值是 `verifier-conversation` 为随船路由写的 `maxScoreTokens: 32768`。`packages/bundle/base/package.json` 把三个包都加为 `workspace:^` 依赖，包括 SD 本身，因为 SD 是被挂载的 bare row。`examples/package.json` 为快照 overlay 把同样三个包加为 `workspace:*`。
+`dsh-base` 挂载 `verifier`、`verifier-conversation`、`tool-verifier` 和 `command-verify`；用户无需任何配置，唯一的 row 级固定值是 `verifier-conversation` 为随船路由写的 `maxScoreTokens: 32768`。`packages/bundle/base/package.json` 把这些包加为 `workspace:^` 依赖，包括 SD 本身，因为 SD 是被挂载的 bare row。`examples/package.json` 为快照 overlay 把三个 seam 包加为 `workspace:*`。
 
 仓库接线：`packages/README.md` 增加组条目；新组创建双语 `packages/verifier/README.md`；创建 `docs/subsystems/verifier.md`、中文对应稿和配对 sidecar；`scripts/gen-doc-graphs.ts` 增加 `verifier` seam 条目；`tsconfig.base.json` 增加 `packages/verifier/*/src` 与 `packages/verifier/*/src/invariant.ts` 候选；`tsconfig.host.json` 增加三个包引用。`@deepseek-ai/dsh-llm` 增加 `purpose: 'verification'`，且 DeepSeek 不改变思考策略。生成的工具、配置和持久化目录通过 `doc-sync` 更新；`packages/core/tools/tests/gen-tool-catalog.spec.ts` 把 `verify` 加进期望工具列表。`SessionEventMap` 增加 `verifier/call`；TypeScript SDK 快照回放后无变化（4/4），Python 单可执行文件快照场景没有挂载 verifier seam，其期望输出不引用新事件。Python 重跑由 `python-runtime` CI 作业负责；本地没有构建好的单可执行文件产物，无法执行该场景。
 
-每个完成的嵌套调用在包围它的 `tool/result` 之前追加一条只写日志的 `verifier/call` 会话事件，由 `dsh-verifier` 声明：provider id、精确路由、定向对、准则 id、重复序号、采样字母、`rawOutput`、`ok` 和 usage。抛出或失败的嵌套流记录 `ok: false`，因此 llm-replay 会重建为 error finish，而不是成功的 stop。`@deepseek-ai/dsh-llm-replay` 在其日志位置派生回放条目，与 `compaction/summary` 分支一致。排名可从会话日志审计，keyless 快照无需 override 手术。
+每个完成的嵌套调用在包围它的 `tool/result` 之前追加一条只写日志的 `verifier/call` 会话事件，由 `dsh-verifier` 声明：provider id、精确路由、定向对、准则 id、重复序号、采样字母、`rawOutput`、`ok`、可选的 `fallback` 和 usage。抛出或失败的嵌套流记录 `ok: false`，因此 llm-replay 会重建为 error finish，而不是成功的 stop。`@deepseek-ai/dsh-llm-replay` 在其日志位置派生回放条目，与 `compaction/summary` 分支一致。排名可从会话日志审计，keyless 快照无需 override 手术。
 
 单元测试把上游边界用例移植为夹具：刻度映射、含 `>A` 融合 token 和“以最后标签为准”的标签解析、PPT 对数与平局规则、槽位交换和前缀分组。一个提交为 JSON 的 golden 夹具包含上游 Python 实现生成的固定 ring 与分数映射；TS 的 `select` 测试只与该夹具比较排名、分数和比较次数。provider 测试用脚本化 `LlmAdapter`，断言对话目标继承、采样、用量聚合、signal 转发、重试、逐调用 deadline、失败映射，以及在途嵌套调用随取消收敛。全等平局的 `selectedId: null` 渲染和 `winner: 'tie'` 渲染都有覆盖。
 
@@ -291,7 +296,7 @@ provider 在前缀预热波次之后最多运行 `maxConcurrency` 个嵌套流�
 ## Consequences
 
 - **没有 logprobs 意味着采样分。** 每次嵌套调用抽取一个字母，而不是读取完整 token 分布，估计值噪声更大。`nEvaluations` 默认 2，工具会报告调用数，但该方法在非 Terminal-Bench 任务上的校准尚未验证。
-- **成本与阻塞。** 三个候选、三个准则、两次重复的默认 `select` 会发起 36 次嵌套调用；默认预算允许六个候选最多 90 次调用。独占屏障可能让同一步内后续工具调用等待最长 24 分钟的 `timeoutMs`；工具描述写明这一代价，provider 保持取消可协作。
+- **成本与阻塞。** 三个候选、三个准则、两次重复的默认 `select` 会发起 36 次嵌套调用；默认预算允许六个候选最多 90 次调用。独占屏障可能让同一步内后续工具调用等待最长 60 分钟的 `timeoutMs`；工具描述写明这一代价，provider 保持取消可协作。
 - **上下文税。** 候选文本是模型可见的工具调用输入并持久化在会话日志中，因此最多 60 KiB 的调用会在 compaction 前随历史重发。description 要求模型只粘贴必要证据。引用式候选（文件路径或 subagent session id）推迟到 v2。
 - **有意的 API 偏差。** 工具默认内置 `terminal_bench` 准则和 `n_evaluations: 2`，而上游要求必填 `criteria`、`n_evaluations` 默认 4。`onError` 默认 `'raise'`，而上游 `select` 默认 `'tie'`。这些是为 Terminal-Bench 2.1 场景和 fail-loud 原则做的选择，已在工具描述和配置表中写明。
 - **Prompt 偏差。** 插入的不可信数据句子是对上游 prompt 唯一的有意改动；其位置和文本由 prompt 快照测试锁定。

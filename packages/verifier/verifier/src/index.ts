@@ -167,9 +167,8 @@ export class VerifierRuntime extends Service {
     if (request.criteria.length === 0) {
       throw new VerifierError('select requires at least one criterion', 'VERIFIER_INVALID_ARGUMENT')
     }
-    if (request.nEvaluations < 1) {
-      throw new VerifierError('nEvaluations must be >= 1', 'VERIFIER_INVALID_ARGUMENT')
-    }
+    assertPositiveInteger('nEvaluations', request.nEvaluations)
+    assertPositiveInteger('pivots', request.pivots)
     const comparisons = countSelectComparisons(n, request.pivots)
     this.assertBudget(comparisons * request.criteria.length * request.nEvaluations, 'select')
     const provider = this.resolveProvider()
@@ -235,9 +234,7 @@ export class VerifierRuntime extends Service {
     if (request.criteria.length === 0) {
       throw new VerifierError('compare requires at least one criterion', 'VERIFIER_INVALID_ARGUMENT')
     }
-    if (request.nEvaluations < 1) {
-      throw new VerifierError('nEvaluations must be >= 1', 'VERIFIER_INVALID_ARGUMENT')
-    }
+    assertPositiveInteger('nEvaluations', request.nEvaluations)
     this.assertBudget(request.criteria.length * request.nEvaluations, 'compare')
     const provider = this.resolveProvider()
     const scores = await this.scoreDirected(
@@ -312,7 +309,6 @@ export class VerifierRuntime extends Service {
     swapOddRepetitions: boolean,
     signal: AbortSignal | undefined,
   ): Promise<ReadonlyMap<string, PairwiseScore>> {
-    if (pairs.length === 0) return Promise.resolve(new Map())
     const payload: VerifierPairsRequest = {
       problem: request.problem,
       candidates: request.candidates,
@@ -324,6 +320,13 @@ export class VerifierRuntime extends Service {
       swapOddRepetitions,
     }
     return provider.scorePairs(agent, payload, signal)
+  }
+}
+
+/** Reject non-integers and values below 1 at the select/compare execution point. */
+function assertPositiveInteger(field: string, value: number): void {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new VerifierError(`${field} must be a positive integer`, 'VERIFIER_INVALID_ARGUMENT')
   }
 }
 

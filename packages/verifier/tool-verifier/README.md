@@ -14,7 +14,7 @@ Model-facing `verify` tool over `ctx.verifier`. This package owns schemas, defau
 | `maxCandidates` | `6` | `select` upper bound |
 | `maxCandidateChars` | `20000` | Per-candidate text cap |
 | `maxTotalChars` | `60000` | Sum cap |
-| `timeoutMs` | `1440000` | Exclusive-barrier budget |
+| `timeoutMs` | `3600000` | Exclusive-barrier budget covering ring/pivot, warm/rest, and one retry |
 
 The tool does not declare `isConcurrencySafe`, so later same-step tool calls wait.
 
@@ -29,7 +29,7 @@ The generated [tool catalog](../../../docs/tool-catalog.md#verify) plus this des
 ##### Verify tool description
 
 ```markdown
-Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 24 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
+Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 60 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
 ```
 
 #### Token effect

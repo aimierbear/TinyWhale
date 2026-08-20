@@ -138,6 +138,8 @@ export interface VerifierCallEventData {
   readonly rawOutput: readonly ContentBlock[]
   /** False when the nested stream finished as a failure or threw. */
   readonly ok: boolean
+  /** True when a successful call scored either slot as the 0.5 text fallback. */
+  readonly fallback?: boolean
   readonly usage?: TokenUsage
 }
 

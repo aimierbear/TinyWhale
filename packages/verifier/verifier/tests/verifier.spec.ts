@@ -188,6 +188,42 @@ describe('VerifierRuntime selection', () => {
       pivots: 2,
       seed: 0,
     })).rejects.toThrow(/nEvaluations/)
+    await expect(verifier.select(agent(), {
+      problem: 'p',
+      candidates,
+      criteria: [criterion],
+      groundTruthNote: '',
+      nEvaluations: 1.5,
+      pivots: 2,
+      seed: 0,
+    })).rejects.toThrow(expect.objectContaining({ code: 'VERIFIER_INVALID_ARGUMENT' }))
+    await expect(verifier.select(agent(), {
+      problem: 'p',
+      candidates,
+      criteria: [criterion],
+      groundTruthNote: '',
+      nEvaluations: 1,
+      pivots: 1.5,
+      seed: 0,
+    })).rejects.toThrow(expect.objectContaining({ code: 'VERIFIER_INVALID_ARGUMENT' }))
+    await expect(verifier.select(agent(), {
+      problem: 'p',
+      candidates,
+      criteria: [criterion],
+      groundTruthNote: '',
+      nEvaluations: 1,
+      pivots: -1,
+      seed: 0,
+    })).rejects.toThrow(expect.objectContaining({ code: 'VERIFIER_INVALID_ARGUMENT' }))
+    await expect(verifier.select(agent(), {
+      problem: 'p',
+      candidates,
+      criteria: [criterion],
+      groundTruthNote: '',
+      nEvaluations: 1,
+      pivots: 0,
+      seed: 0,
+    })).rejects.toThrow(/pivots/)
   })
 })
 
@@ -281,7 +317,7 @@ describe('select and compare orchestration', () => {
       criteria: [criterion],
       groundTruthNote: '',
       nEvaluations: 1,
-      pivots: 0,
+      pivots: 1,
       seed: 0,
     })
     expect(result.ranking.every(row => row.score === 0.5 || row.score === 0)).toBe(true)
@@ -304,23 +340,16 @@ describe('select and compare orchestration', () => {
     })).resolves.toMatchObject({ rA: 1 })
   })
 
-  it('scores an empty pivot-round list when pivots is 0', async () => {
+  it('rejects compare nEvaluations that are not a positive integer', async () => {
     const { verifier } = await mount()
-    verifier.registerProvider(provider('conversation', true, async (request) => {
-      const map = new Map<string, PairwiseScore>()
-      for (const pair of request.pairs) map.set(pairKey(pair[0], pair[1]), score(0.9, 0.1, 1))
-      return map
-    }))
-    const result = await verifier.select(agent(), {
+    verifier.registerProvider(provider('conversation', true))
+    await expect(verifier.compare(agent(), {
       problem: 'p',
-      candidates,
+      candidates: [candidates[0]!, candidates[1]!],
       criteria: [criterion],
       groundTruthNote: '',
-      nEvaluations: 1,
-      pivots: 0,
-      seed: 0,
-    })
-    expect(result.nComparisons).toBe(3)
+      nEvaluations: 1.5,
+    })).rejects.toThrow(expect.objectContaining({ code: 'VERIFIER_INVALID_ARGUMENT' }))
   })
 
   it('throws when compare receives no score for 0,1', async () => {

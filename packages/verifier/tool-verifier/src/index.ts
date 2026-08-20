@@ -29,8 +29,12 @@ import type {
 export const name = 'tool-verifier'
 export const inject = ['tools', 'verifier']
 
-/** Default cooperative tool-call timeout, aligned with 12 × 120s nested-call waves. */
-export const DEFAULT_VERIFY_TIMEOUT_MS = 1_440_000
+/**
+ * Default exclusive-barrier budget.
+ * Covers ring then pivot, each with a warm/rest split, plus `maxAttempts: 2`:
+ * (ceil(96 / 8) + 3) × 2 × 120s = 60 minutes.
+ */
+export const DEFAULT_VERIFY_TIMEOUT_MS = 3_600_000
 
 /**
  * Build the model-facing description from resolved config so deployment changes
@@ -329,7 +333,7 @@ export function apply(ctx: Context, config: Config): void {
       },
       pivots: {
         type: 'integer',
-        description: 'PPT pivot count for select. Default 2; clamped to the candidate count.',
+        description: `PPT pivot count for select. Default ${resolved.defaultPivots}; clamped to the candidate count.`,
       },
       seed: {
         type: 'integer',

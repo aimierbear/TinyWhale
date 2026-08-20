@@ -158,7 +158,7 @@ export function countSelectComparisons(n: number, pivots: number): number {
 
 /** Ranking produced from accumulated soft wins. */
 export interface RankingTotals {
-  /** Winning candidate index (higher index wins exact ties). */
+  /** Winning candidate index (lower index wins exact ties, matching upstream). */
   readonly selectedIndex: number
   /** Mean preference `w_i / c_i` per candidate. */
   readonly scores: readonly number[]
@@ -190,9 +190,7 @@ export function rankingFromTotals(w: readonly number[], c: readonly number[]): R
   })
   const selectedIndex = scores.reduce((best, value, index) => {
     const bestValue = atIndex(scores, best)
-    if (value > bestValue) return index
-    if (value === bestValue && index > best) return index
-    return best
+    return value > bestValue ? index : best
   }, 0)
   const ranking = Array.from({ length: n }, (_, index) => index)
   ranking.sort((left, right) => {

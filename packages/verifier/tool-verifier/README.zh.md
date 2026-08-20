@@ -14,7 +14,7 @@
 | `maxCandidates` | `6` | `select` 上限 |
 | `maxCandidateChars` | `20000` | 单个候选文本上限 |
 | `maxTotalChars` | `60000` | 总和上限 |
-| `timeoutMs` | `1440000` | 独占屏障预算 |
+| `timeoutMs` | `3600000` | 覆盖 ring/pivot、warm/rest 以及一次重试的独占屏障预算 |
 
 工具不声明 `isConcurrencySafe`，因此同一步内后续工具调用会等待。
 
@@ -29,7 +29,7 @@
 ##### Verify tool description
 
 ```markdown
-Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 24 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
+Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 60 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
 ```
 
 #### Token effect
