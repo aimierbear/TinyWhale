@@ -154,6 +154,12 @@ flowchart LR
   cfg --> plugin_dsh_base_web_search_deepseek
   plugin_dsh_base_tool_web["tool-web<br/>@deepseek-ai/dsh-tool-web"]
   cfg --> plugin_dsh_base_tool_web
+  plugin_dsh_base_verifier["verifier<br/>@deepseek-ai/dsh-verifier"]
+  cfg --> plugin_dsh_base_verifier
+  plugin_dsh_base_verifier_conversation["verifier-conversation<br/>@deepseek-ai/dsh-verifier-conversation"]
+  cfg --> plugin_dsh_base_verifier_conversation
+  plugin_dsh_base_tool_verifier["tool-verifier<br/>@deepseek-ai/dsh-tool-verifier"]
+  cfg --> plugin_dsh_base_tool_verifier
   plugin_dsh_base_tools["tools<br/>@deepseek-ai/dsh-tools"]
   cfg --> plugin_dsh_base_tools
   plugin_dsh_base_system_prompt["system-prompt<br/>@deepseek-ai/dsh-system-prompt"]
@@ -241,6 +247,9 @@ flowchart LR
 | `web` | `@deepseek-ai/dsh-web` |
 | `web-search-deepseek` | `@deepseek-ai/dsh-web-search-deepseek` |
 | `tool-web` | `@deepseek-ai/dsh-tool-web` |
+| `verifier` | `@deepseek-ai/dsh-verifier` |
+| `verifier-conversation` | `@deepseek-ai/dsh-verifier-conversation` |
+| `tool-verifier` | `@deepseek-ai/dsh-tool-verifier` |
 | `tools` | `@deepseek-ai/dsh-tools` |
 | `system-prompt` | `@deepseek-ai/dsh-system-prompt` |
 | `agent-loop` | `@deepseek-ai/dsh-agent-loop` |

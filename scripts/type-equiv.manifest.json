@@ -1316,6 +1316,26 @@
       "source": "packages/subagent/subagent/src/types.ts"
     },
     {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierCriterion",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierCandidate",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierContext",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/verifier.md",
+      "symbol": "VerifierCallEventData",
+      "source": "packages/verifier/verifier/src/types.ts"
+    },
+    {
       "doc": "docs/subsystems/web.md",
       "symbol": "WebSearchRequest",
       "source": "packages/web/web/src/types.ts"

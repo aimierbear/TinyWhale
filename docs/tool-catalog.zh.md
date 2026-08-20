@@ -41,6 +41,7 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+| `@deepseek-ai/dsh-tool-verifier` | `verify` | `ctx.tools`、`ctx.verifier` | `tool/call`、`verifier/call per nested scoring stream`、`tool/result` | - | verify 把成对评分放在 ctx.verifier 之后，使面向模型的 schema 在更换裁判传输层时保持稳定。 |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -1876,3 +1877,108 @@ todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为
 来源：[`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。
+
+<a id="deepseek-aidsh-tool-verifier"></a>
+
+## `@deepseek-ai/dsh-tool-verifier`
+
+### `verify`
+
+Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 24 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "description": "select ranks 2..6 candidates; compare scores exactly two in fixed A/B order. Default select.",
+      "enum": [
+        "select",
+        "compare"
+      ]
+    },
+    "problem": {
+      "type": "string",
+      "description": "Task description shown to the judge."
+    },
+    "candidates": {
+      "type": "array",
+      "description": "Candidate trajectories. select: 2..6; compare: exactly 2.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable candidate id unique in this call."
+          },
+          "text": {
+            "type": "string",
+            "description": "Evidence the judge should score; keep it short."
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ]
+      }
+    },
+    "criteriaName": {
+      "type": "string",
+      "description": "Bundled criteria file. Default terminal_bench when criteria is omitted.",
+      "enum": [
+        "terminal_bench",
+        "swe_bench",
+        "medagentbench"
+      ]
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Inline criteria. Do not also pass criteriaName.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Criterion display name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Judge instruction for this criterion."
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "ground_truth_note": {
+      "type": "string",
+      "description": "Note the judge always sees. Defaults to the bundled file note."
+    },
+    "n_evaluations": {
+      "type": "integer",
+      "description": "Repeated verifications per criterion. Default 2, max 8."
+    },
+    "pivots": {
+      "type": "integer",
+      "description": "PPT pivot count for select. Default 2; clamped to the candidate count."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "DSH-internal ring seed. Default 0."
+    }
+  },
+  "required": [
+    "problem",
+    "candidates"
+  ]
+}
+```
+
+来源：[`packages/verifier/tool-verifier/src/index.ts`](../packages/verifier/tool-verifier/src/index.ts)
+
+verify 把成对评分放在 ctx.verifier 之后，使面向模型的 schema 在更换裁判传输层时保持稳定。

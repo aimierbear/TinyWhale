@@ -39,6 +39,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
+| `@deepseek-ai/dsh-tool-verifier` | `verify` | `ctx.tools`, `ctx.verifier` | `tool/call`, `verifier/call per nested scoring stream`, `tool/result` | - | verify keeps pairwise scoring behind ctx.verifier so the model-facing schema stays stable across judge transports. |
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 
@@ -1871,3 +1872,108 @@ Search the web for current information. Returns an optional summary answer and a
 Source: [`packages/web/tool-web/src/index.ts`](../packages/web/tool-web/src/index.ts)
 
 web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.
+
+<a id="deepseek-aidsh-tool-verifier"></a>
+
+## `@deepseek-ai/dsh-tool-verifier`
+
+### `verify`
+
+Compare or rank candidate trajectories with a pairwise verifier. Scoring issues auxiliary LLM calls through the same conversation model (purpose verification). Use mode=compare when you have exactly two candidates. select over two candidates repeats ring edges and costs more. select ranks 2..6 candidates with a probabilistic pivot tournament. Call cost: select makes (N + k(N-k) + C(k,2)) × criteria × n_evaluations nested calls, where k = min(pivots, N). compare makes criteria × n_evaluations nested calls. Default n_evaluations is 2. The call is an exclusive barrier: later same-step tool calls wait, up to 24 minutes. Default criteria is the bundled terminal_bench rubric (specification, output match, error signals). Pass explicit criteria for any task that is not a terminal-benchmark trajectory. Do not supply both criteriaName and criteria. Candidate text stays in the model-visible tool-call record and is resent with conversation history until compaction. Paste only the evidence a judge needs. This tool does not execute candidates, run tests, or inspect files. It only scores the text you provide.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "description": "select ranks 2..6 candidates; compare scores exactly two in fixed A/B order. Default select.",
+      "enum": [
+        "select",
+        "compare"
+      ]
+    },
+    "problem": {
+      "type": "string",
+      "description": "Task description shown to the judge."
+    },
+    "candidates": {
+      "type": "array",
+      "description": "Candidate trajectories. select: 2..6; compare: exactly 2.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable candidate id unique in this call."
+          },
+          "text": {
+            "type": "string",
+            "description": "Evidence the judge should score; keep it short."
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ]
+      }
+    },
+    "criteriaName": {
+      "type": "string",
+      "description": "Bundled criteria file. Default terminal_bench when criteria is omitted.",
+      "enum": [
+        "terminal_bench",
+        "swe_bench",
+        "medagentbench"
+      ]
+    },
+    "criteria": {
+      "type": "array",
+      "description": "Inline criteria. Do not also pass criteriaName.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Criterion display name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Judge instruction for this criterion."
+          }
+        },
+        "required": [
+          "name",
+          "description"
+        ]
+      }
+    },
+    "ground_truth_note": {
+      "type": "string",
+      "description": "Note the judge always sees. Defaults to the bundled file note."
+    },
+    "n_evaluations": {
+      "type": "integer",
+      "description": "Repeated verifications per criterion. Default 2, max 8."
+    },
+    "pivots": {
+      "type": "integer",
+      "description": "PPT pivot count for select. Default 2; clamped to the candidate count."
+    },
+    "seed": {
+      "type": "integer",
+      "description": "DSH-internal ring seed. Default 0."
+    }
+  },
+  "required": [
+    "problem",
+    "candidates"
+  ]
+}
+```
+
+Source: [`packages/verifier/tool-verifier/src/index.ts`](../packages/verifier/tool-verifier/src/index.ts)
+
+verify keeps pairwise scoring behind ctx.verifier so the model-facing schema stays stable across judge transports.

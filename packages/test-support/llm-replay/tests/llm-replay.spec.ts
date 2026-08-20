@@ -231,6 +231,122 @@ describe('deriveReplayScript', () => {
     ])
   })
 
+  it('inserts verifier/call output in log order', () => {
+    const block = { type: 'text' as const, text: '<score_A> A </score_A>' }
+    const usage = { inputTokens: 4, outputTokens: 2 }
+    const nested: StreamChunk[] = [
+      { type: 'block-start', index: 0, blockType: 'text' },
+      { type: 'block-end', index: 0, block },
+      { type: 'usage', usage },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ]
+    let seq = 1
+    const events: SessionEvent[] = [
+      ...TEXT_CHUNKS.map(chunk => chunkEvent(seq++, 1, 1, chunk)),
+      {
+        type: 'verifier/call',
+        seq: seq++,
+        time: 0,
+        data: {
+          providerId: 'conversation',
+          route: { provider: 'mock', model: 'judge' },
+          pair: [0, 1],
+          criterionId: 'fit',
+          repetition: 0,
+          sampledLetters: ['A', 'T'],
+          rawOutput: [block],
+          ok: true,
+          usage,
+        },
+      },
+    ]
+    expect(deriveReplayScript(events)).toEqual([
+      { kind: 'chunks', chunks: TEXT_CHUNKS },
+      { kind: 'chunks', chunks: nested },
+    ])
+  })
+
+  it('keeps outer, nested verifier, and following outer calls in log order', () => {
+    const block = { type: 'text' as const, text: '<score_A> A </score_A>' }
+    const nested: StreamChunk[] = [
+      { type: 'block-start', index: 0, blockType: 'text' },
+      { type: 'block-end', index: 0, block },
+      { type: 'finish', reason: { kind: 'stop' } },
+    ]
+    let seq = 1
+    const events: SessionEvent[] = [
+      ...TEXT_CHUNKS.map(chunk => chunkEvent(seq++, 1, 1, chunk)),
+      {
+        type: 'verifier/call',
+        seq: seq++,
+        time: 0,
+        data: {
+          providerId: 'conversation',
+          route: { provider: 'mock', model: 'judge' },
+          pair: [0, 1],
+          criterionId: 'fit',
+          repetition: 0,
+          sampledLetters: ['A', 'T'],
+          rawOutput: [block],
+          ok: true,
+        },
+      },
+      ...TEXT_CHUNKS.map(chunk => chunkEvent(seq++, 1, 2, chunk)),
+    ]
+    expect(deriveReplayScript(events)).toEqual([
+      { kind: 'chunks', chunks: TEXT_CHUNKS },
+      { kind: 'chunks', chunks: nested },
+      { kind: 'chunks', chunks: TEXT_CHUNKS },
+    ])
+  })
+
+  it('replays a failed verifier/call as an error finish', () => {
+    const block = { type: 'text' as const, text: 'truncated' }
+    const event = {
+      type: 'verifier/call' as const,
+      seq: 1,
+      time: 0,
+      data: {
+        providerId: 'conversation',
+        route: { provider: 'mock', model: 'judge' },
+        pair: [0, 1] as const,
+        criterionId: 'fit',
+        repetition: 0,
+        sampledLetters: [],
+        rawOutput: [block],
+        ok: false,
+      },
+    }
+    expect(deriveReplayScript([event as SessionEvent])).toEqual([{
+      kind: 'chunks',
+      chunks: [
+        { type: 'block-start', index: 0, blockType: 'text' },
+        { type: 'block-end', index: 0, block },
+        {
+          type: 'finish',
+          reason: { kind: 'error', failure: { message: 'replayed verifier nested call failure', code: 'VERIFIER_LLM_FAILED' } },
+        },
+      ],
+    }])
+  })
+
+  it('rejects verifier/call without rawOutput', () => {
+    const event = {
+      type: 'verifier/call' as const,
+      seq: 1,
+      time: 0,
+      data: {
+        providerId: 'conversation',
+        route: { provider: 'mock', model: 'judge' },
+        pair: [0, 1] as const,
+        criterionId: 'fit',
+        repetition: 0,
+        sampledLetters: [],
+      },
+    }
+    expect(() => deriveReplayScript([event as SessionEvent])).toThrow(/without rawOutput/)
+  })
+
   it('does not infer an LLM call from compaction/summary without raw output', () => {
     const event: SessionEvent<'compaction/summary'> = {
       type: 'compaction/summary',

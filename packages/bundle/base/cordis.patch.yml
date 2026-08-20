@@ -417,6 +417,19 @@
         fetch: false
         searchTimeoutMs: 60000
 
+    # Pairwise trajectory verifier. Nested scoring inherits the conversation
+    # model; the shipped DeepSeek route pins the upstream 32k output budget.
+    - id: verifier
+      name: '@deepseek-ai/dsh-verifier'
+
+    - id: verifier-conversation
+      name: '@deepseek-ai/dsh-verifier-conversation'
+      config:
+        maxScoreTokens: 32768
+
+    - id: tool-verifier
+      name: '@deepseek-ai/dsh-tool-verifier'
+
     # ── rows every mode mounts, whose values each overlay may state ──────────────
 
     # The tool registry. Presentation mode is a deployment choice; omitting it here

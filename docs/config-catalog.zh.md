@@ -2741,6 +2741,35 @@ export interface Config {
 
 来源：[`packages/todo/tool-todo/src/index.ts:29`](../packages/todo/tool-todo/src/index.ts)
 
+
+<a id="deepseek-aidsh-tool-verifier"></a>
+
+## `@deepseek-ai/dsh-tool-verifier`
+
+需要：`tools` · `verifier`
+
+```ts config-catalog
+/** Plugin config for defaults and input bounds. */
+export interface Config {
+  /** Default repeated verifications per criterion when the model omits `n_evaluations`. */
+  readonly defaultNEvaluations?: number
+  /** Upper bound for a model-requested `n_evaluations`. */
+  readonly maxNEvaluations?: number
+  /** Default PPT pivot count when the model omits `pivots`. */
+  readonly defaultPivots?: number
+  /** Maximum candidate count one `select` call accepts. Must be at least 2. */
+  readonly maxCandidates?: number
+  /** Per-candidate text character cap. */
+  readonly maxCandidateChars?: number
+  /** Summed candidate-text character cap across one call. */
+  readonly maxTotalChars?: number
+  /** Cooperative tool-call timeout; later same-step tool calls wait behind this exclusive barrier. */
+  readonly timeoutMs?: number
+}
+```
+
+来源：[`packages/verifier/tool-verifier/src/index.ts:56`](../packages/verifier/tool-verifier/src/index.ts)
+
 <a id="deepseek-aidsh-tool-web"></a>
 
 ## `@deepseek-ai/dsh-tool-web`
@@ -2867,6 +2896,56 @@ export type ApprovalPolicy = 'ask' | 'never'
 ```
 
 来源：[`packages/interaction/user-approval/src/index.ts:177`](../packages/interaction/user-approval/src/index.ts)
+
+
+<a id="deepseek-aidsh-verifier"></a>
+
+## `@deepseek-ai/dsh-verifier`
+
+```ts config-catalog
+/** Deployment config for the verifier seam. */
+export interface VerifierRuntimeConfig {
+  /** Explicit provider id. Empty or omitted auto-selects when exactly one usable provider is registered. */
+  readonly provider?: string
+  /** Hard cap on nested LLM calls per `select`/`compare`. */
+  readonly maxCalls?: number
+}
+```
+
+来源：[`packages/verifier/verifier/src/index.ts:89`](../packages/verifier/verifier/src/index.ts)
+
+<a id="deepseek-aidsh-verifier-conversation"></a>
+
+## `@deepseek-ai/dsh-verifier-conversation`
+
+Requires: `verifier` · `llm`
+
+```ts config-catalog
+/** Plugin config: optional pinned judge route plus nested-call policy. */
+export type Config = ConversationVerifierConfig
+
+/** Deployment policy for nested scoring calls. */
+export interface ConversationVerifierConfig {
+  /** Explicit judge provider route; empty inherits the conversation route. Must pair with `judgeModel`. */
+  readonly judgeProvider?: string
+  /** Explicit judge model id; empty inherits the conversation model. Must pair with `judgeProvider`. */
+  readonly judgeModel?: string
+  /** Sampling temperature for each nested score call. */
+  readonly judgeTemperature?: number
+  /** Optional output-token cap. Zero omits `maxTokens` and inherits adapter defaults. */
+  readonly maxScoreTokens?: number
+  /** Bounded parallel nested calls after the prefix-warming wave. */
+  readonly maxConcurrency?: number
+  /** Per-attempt deadline for one nested scoring stream. */
+  readonly perCallTimeoutMs?: number
+  /** Maximum attempts per nested job; `2` is one retry after the first failure. */
+  readonly maxAttempts?: number
+  /** Failure policy: `raise` fails the whole call, `tie` records 0.5/0.5 for select jobs. */
+  readonly onError?: string
+}
+```
+
+来源：[`packages/verifier/verifier-conversation/src/index.ts:40`](../packages/verifier/verifier-conversation/src/index.ts)
 
 <a id="deepseek-aidsh-web"></a>
 
@@ -3170,6 +3249,7 @@ export interface Config {
 - `@deepseek-ai/dsh-session-title-llm`（[`packages/session/session-title-llm/src/index.ts`](../packages/session/session-title-llm/src/index.ts)）
 - `@deepseek-ai/dsh-subagent-in-process-driver`（[`packages/subagent/subagent-in-process-driver/src/index.ts`](../packages/subagent/subagent-in-process-driver/src/index.ts)）
 - `@deepseek-ai/dsh-timeout`（[`packages/util/timeout/src/index.ts`](../packages/util/timeout/src/index.ts)）
+- `@deepseek-ai/dsh-tinywhale`（[`packages/bundle/tinywhale/src/index.ts`](../packages/bundle/tinywhale/src/index.ts)）
 - `@deepseek-ai/dsh-typert-generator`（[`packages/typert/generator/src/index.ts`](../packages/typert/generator/src/index.ts)）
 - `@deepseek-ai/dsh-typert-protocol`（[`packages/typert/protocol/src/index.ts`](../packages/typert/protocol/src/index.ts)）
 - `@deepseek-ai/dsh-typert-registry`（[`packages/typert/registry/src/index.ts`](../packages/typert/registry/src/index.ts)）

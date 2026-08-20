@@ -2030,6 +2030,31 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'verifier',
+    summary: 'The verifier service.',
+    description: 'The verifier service. Registered as `ctx.verifier` (one instance per context).\n\nSelection is resolved at execution time and never depends on registration order: a configured id must be registered and `available()`; otherwise exactly one usable provider is required.',
+    methods: [
+      {
+        signature: 'registerProvider(provider: VerifierProvider): () => void',
+        description: 'Register a scoring provider. Throws VerifierError `VERIFIER_DUPLICATE_PROVIDER` if its id is already registered.',
+        parameters: [{ name: 'provider', description: 'the provider; its `id` is the registry key.' }],
+        returns: 'the disposer that unregisters the provider.',
+      },
+      {
+        signature: 'async select( agent: VerifierContext, request: VerifierSelectRequest, signal?: AbortSignal, ): Promise<VerifierSelectResult>',
+        description: 'Rank candidates with a Probabilistic Pivot Tournament. Pair generation matches upstream, including directed pairs a pivot round may repeat.',
+        parameters: [{ name: 'agent', description: 'session and conversation-route fallback.' }, { name: 'request', description: 'problem, candidates, criteria, and PPT parameters.' }, { name: 'signal', description: 'cancellation forwarded to the provider.' }],
+        returns: 'the selected candidate, ranking, comparison count, and usage.',
+      },
+      {
+        signature: 'async compare( agent: VerifierContext, request: VerifierCompareRequest, signal?: AbortSignal, ): Promise<VerifierCompareResult>',
+        description: 'Score one directed pair in fixed candidate order. Always raises on a failed nested call, matching upstream `compare()`.',
+        parameters: [{ name: 'agent', description: 'session and conversation-route fallback.' }, { name: 'request', description: 'problem, the two candidates, and criteria.' }, { name: 'signal', description: 'cancellation forwarded to the provider.' }],
+        returns: 'raw rewards in candidate order plus per-criterion breakdown.',
+      },
+    ],
+  },
+  {
     key: 'web',
     summary: 'The web access service.',
     description: 'The web access service. Registered as `ctx.web` (one instance per context).\n\nSelection semantics (resolved at execution time, never order-dependent):\n\n- A configured id that is registered and `available()` → that provider.\n- A configured id not registered → `WEB_PROVIDER_CONFIGURED_MISSING`.\n- A configured id registered but unavailable → `WEB_PROVIDER_CONFIGURED_UNAVAILABLE`.\n- No id configured, exactly one registered usable provider → that provider.\n- No id configured, multiple usable providers → `WEB_PROVIDER_AMBIGUOUS`.\n- No id configured, no usable provider → `WEB_PROVIDER_UNAVAILABLE`.',
@@ -3097,7 +3122,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'GenerateOptions',
-    declaration: 'export interface GenerateOptions {\n    provider: string;\n    model: string;\n    reasoningEffort?: ReasoningEffortId;\n    messages: Message[];\n    system?: string;\n    tools?: ToolSchema[];\n    temperature?: number;\n    maxTokens?: number;\n    stop?: string[];\n    signal?: AbortSignal;\n    sessionId?: Branded<\'SessionId\'>;\n    purpose?: \'compaction\' | \'session-title\';\n}',
+    declaration: 'export interface GenerateOptions {\n    provider: string;\n    model: string;\n    reasoningEffort?: ReasoningEffortId;\n    messages: Message[];\n    system?: string;\n    tools?: ToolSchema[];\n    temperature?: number;\n    maxTokens?: number;\n    stop?: string[];\n    signal?: AbortSignal;\n    sessionId?: Branded<\'SessionId\'>;\n    purpose?: \'compaction\' | \'session-title\' | \'verification\';\n}',
   },
   {
     name: 'GenericCallView',
@@ -3478,6 +3503,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'OneShotSubagentDescriptorData',
     declaration: 'export interface OneShotSubagentDescriptorData extends SubagentDescriptorBase {\n    readonly mode: \'one-shot\';\n    readonly label?: string;\n}',
+  },
+  {
+    name: 'PairwiseScore',
+    declaration: 'export interface PairwiseScore {\n    readonly rA: number;\n    readonly rB: number;\n    readonly criteria: readonly {\n        readonly criterionId: string;\n        readonly rA: number;\n        readonly rB: number;\n    }[];\n    readonly calls: number;\n    readonly usage?: TokenUsage;\n}',
   },
   {
     name: 'PermissionSelect',
@@ -4538,6 +4567,42 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UserQuestionProvider',
     declaration: 'export interface UserQuestionProvider {\n    ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;\n}',
+  },
+  {
+    name: 'VerifierCandidate',
+    declaration: 'export interface VerifierCandidate {\n    readonly id: string;\n    readonly text: string;\n}',
+  },
+  {
+    name: 'VerifierCompareRequest',
+    declaration: 'export interface VerifierCompareRequest {\n    readonly problem: string;\n    readonly candidates: readonly [\n        VerifierCandidate,\n        VerifierCandidate\n    ];\n    readonly criteria: readonly VerifierCriterion[];\n    readonly groundTruthNote: string;\n    readonly nEvaluations: number;\n}',
+  },
+  {
+    name: 'VerifierCompareResult',
+    declaration: 'export interface VerifierCompareResult {\n    readonly kind: \'compare\';\n    readonly rA: number;\n    readonly rB: number;\n    readonly criteria: PairwiseScore[\'criteria\'];\n    readonly calls: number;\n    readonly usage?: TokenUsage;\n}',
+  },
+  {
+    name: 'VerifierContext',
+    declaration: 'export interface VerifierContext {\n    readonly session: Session;\n    readonly options: {\n        readonly provider?: string;\n        readonly model?: string;\n    };\n}',
+  },
+  {
+    name: 'VerifierCriterion',
+    declaration: 'export interface VerifierCriterion {\n    readonly id: string;\n    readonly name: string;\n    readonly description: string;\n}',
+  },
+  {
+    name: 'VerifierPairsRequest',
+    declaration: 'export interface VerifierPairsRequest {\n    readonly problem: string;\n    readonly candidates: readonly VerifierCandidate[];\n    readonly pairs: readonly (readonly [\n        number,\n        number\n    ])[];\n    readonly criteria: readonly VerifierCriterion[];\n    readonly groundTruthNote: string;\n    readonly nEvaluations: number;\n    readonly onError: \'raise\' | \'tie\';\n    readonly swapOddRepetitions: boolean;\n}',
+  },
+  {
+    name: 'VerifierProvider',
+    declaration: 'export interface VerifierProvider {\n    readonly id: string;\n    readonly onError: \'raise\' | \'tie\';\n    available(): boolean;\n    scorePairs(agent: VerifierContext, request: VerifierPairsRequest, signal?: AbortSignal): Promise<ReadonlyMap<string, PairwiseScore>>;\n}',
+  },
+  {
+    name: 'VerifierSelectRequest',
+    declaration: 'export interface VerifierSelectRequest {\n    readonly problem: string;\n    readonly candidates: readonly VerifierCandidate[];\n    readonly criteria: readonly VerifierCriterion[];\n    readonly groundTruthNote: string;\n    readonly nEvaluations: number;\n    readonly pivots: number;\n    readonly seed: number;\n}',
+  },
+  {
+    name: 'VerifierSelectResult',
+    declaration: 'export interface VerifierSelectResult {\n    readonly kind: \'select\';\n    readonly selectedId: string;\n    readonly ranking: readonly {\n        readonly candidateId: string;\n        readonly score: number;\n    }[];\n    readonly nComparisons: number;\n    readonly criteriaIds: readonly string[];\n    readonly calls: number;\n    readonly usage?: TokenUsage;\n}',
   },
   {
     name: 'WebBootEntry',

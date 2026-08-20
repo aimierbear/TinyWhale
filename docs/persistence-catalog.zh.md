@@ -932,6 +932,23 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 
 来源：[`packages/core/session/src/types.ts:264`](../packages/core/session/src/types.ts)
 
+### `verifier/*`
+
+<a id="verifiercall--log-only"></a>
+
+#### `verifier/call` — log-only
+
+```ts persistence-catalog
+/**
+ * One nested verifier scoring call — log-only, not a surface event.
+ * `rawOutput` is the complete assembled provider output so llm-replay can
+ * reconstruct the stream at this log position.
+ */
+'verifier/call': VerifierCallEventData
+```
+
+来源：[`packages/verifier/verifier/src/types.ts:149`](../packages/verifier/verifier/src/types.ts)
+
 ### `web/*`
 
 <a id="webdeepseek-search-llm-request--log-only"></a>

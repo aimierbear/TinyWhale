@@ -11,6 +11,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { delimiter as pathDelimiter } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-compaction'
+import type {} from '@deepseek-ai/dsh-verifier'
 import { decodeStorageRecord } from '@deepseek-ai/dsh-session'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {
@@ -191,15 +192,63 @@ export function parseSessionHeader(text: string): { id: string; createdAt: numbe
 }
 
 /**
+ * Rebuild a successful stream from a complete assembled output.
+ * @param rawOutput - complete assembled provider blocks.
+ * @param usage - optional recorded token usage.
+ * @returns a canonical successful chunk sequence ending in `stop`.
+ */
+function replayChunksFromOutput(rawOutput: readonly ContentBlock[], usage?: TokenUsage): StreamChunk[] {
+  return replayOutput(rawOutput, usage, { kind: 'stop' })
+}
+
+/**
+ * Rebuild a normalized failed verifier stream from assembled output or none.
+ * The durable event stores the normalized `VERIFIER_LLM_FAILED` terminal, not
+ * the original provider error object.
+ * @param rawOutput - complete assembled provider blocks, empty on a throw before chunks.
+ * @param usage - optional recorded token usage.
+ * @returns a canonical error chunk sequence ending in `error`.
+ */
+function replayFailedFromOutput(rawOutput: readonly ContentBlock[], usage?: TokenUsage): StreamChunk[] {
+  return replayOutput(rawOutput, usage, {
+    kind: 'error',
+    failure: { message: 'replayed verifier nested call failure', code: 'VERIFIER_LLM_FAILED' },
+  })
+}
+
+/**
+ * Render assembled output plus usage as a canonical replay stream.
+ * @param rawOutput - complete assembled provider blocks.
+ * @param usage - optional recorded token usage.
+ * @param reason - terminal finish reason for the replayed stream.
+ * @returns one chunk sequence, in stream order.
+ */
+function replayOutput(
+  rawOutput: readonly ContentBlock[],
+  usage: TokenUsage | undefined,
+  reason: { kind: 'stop' } | { kind: 'error'; failure: { message: string; code: string } },
+): StreamChunk[] {
+  const chunks: StreamChunk[] = []
+  for (const [index, block] of rawOutput.entries()) {
+    chunks.push({ type: 'block-start', index, blockType: block.type })
+    chunks.push({ type: 'block-end', index, block })
+  }
+  if (usage !== undefined) chunks.push({ type: 'usage', usage })
+  chunks.push({ type: 'finish', reason })
+  return chunks
+}
+
+/**
  * Reconstruct the per-`stream()` replay script from a recorded session log.
  *
  * Splits `assistant/chunk` events at every `finish`, using turn and step changes
  * to detect an unterminated prior call. A `compaction/summary` explicitly marked
  * as one local LLM-stream call becomes a canonical successful stream from its
- * complete `rawOutput` at the summary's log position. A
- * missing assistant terminator means the live stream threw, so derivation
- * rejects and the scenario must provide an explicit override. Multiple calls
- * may share one turn and step when the loop retries.
+ * complete `rawOutput` at the summary's log position. A `verifier/call` becomes
+ * a canonical successful or normalized-failed stream from its `rawOutput` at
+ * that log position. A missing assistant terminator means the live stream threw,
+ * so derivation rejects and the scenario must provide an explicit override.
+ * Multiple calls may share one turn and step when the loop retries.
  * @param events - the recorded session's events.
  * @returns one `chunks` entry per recorded model call, in call order.
  */
@@ -218,29 +267,35 @@ export function deriveReplayScript(events: SessionEvent[]): ReplayEntry[] {
     script.push({ kind: 'chunks', chunks })
   }
   for (const event of events) {
-    if (event.type === 'compaction/summary') {
+    if (event.type === 'compaction/summary' || event.type === 'verifier/call') {
       close(currentKey, current)
       currentKey = undefined
       current = []
       // JSONL decoding crosses an untyped durable boundary, so retain its wider
       // shape even though current in-process producers enforce this correlation.
-      const persisted: {
+      const persisted = event.data as {
         readonly llmStreamCall?: true
-        readonly rawOutput?: ContentBlock[]
+        readonly rawOutput?: readonly ContentBlock[]
         readonly usage?: TokenUsage
-      } = event.data
+        readonly ok?: boolean
+      }
+      if (event.type === 'verifier/call') {
+        if (persisted.rawOutput === undefined) {
+          throw new Error('llm-replay: verifier/call marks an LLM stream call without rawOutput')
+        }
+        script.push({
+          kind: 'chunks',
+          chunks: persisted.ok === false
+            ? replayFailedFromOutput(persisted.rawOutput, persisted.usage)
+            : replayChunksFromOutput(persisted.rawOutput, persisted.usage),
+        })
+        continue
+      }
       if (persisted.llmStreamCall === true) {
         if (persisted.rawOutput === undefined) {
           throw new Error('llm-replay: compaction/summary marks an LLM stream call without rawOutput')
         }
-        const chunks: StreamChunk[] = []
-        for (const [index, block] of persisted.rawOutput.entries()) {
-          chunks.push({ type: 'block-start', index, blockType: block.type })
-          chunks.push({ type: 'block-end', index, block })
-        }
-        if (persisted.usage !== undefined) chunks.push({ type: 'usage', usage: persisted.usage })
-        chunks.push({ type: 'finish', reason: { kind: 'stop' } })
-        script.push({ kind: 'chunks', chunks })
+        script.push({ kind: 'chunks', chunks: replayChunksFromOutput(persisted.rawOutput, persisted.usage) })
       }
       continue
     }

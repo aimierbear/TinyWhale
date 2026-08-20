@@ -60,6 +60,8 @@ import * as ToolTasks from '@deepseek-ai/dsh-tool-jobs'
 import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
 import * as ToolSubagent from '@deepseek-ai/dsh-tool-subagent'
 import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
+import VerifierRuntime from '@deepseek-ai/dsh-verifier'
+import * as ToolVerifier from '@deepseek-ai/dsh-tool-verifier'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
@@ -550,6 +552,19 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-verifier',
+    dir: 'tool-verifier',
+    source: 'packages/verifier/tool-verifier/src/index.ts',
+    requires: ['ctx.tools', 'ctx.verifier'],
+    writes: ['tool/call', 'verifier/call per nested scoring stream', 'tool/result'],
+    async mount(ctx) {
+      await ctx.plugin(VerifierRuntime)
+      await ctx.plugin(ToolVerifier)
+    },
+    note:
+      'verify keeps pairwise scoring behind ctx.verifier so the model-facing schema stays stable across judge transports.',
   },
 ]
 

@@ -18,6 +18,7 @@ import {
   decompressZstdFrame,
   scanZstdFrames,
 } from '@deepseek-ai/dsh-session-persistence-jsonl/src/zstd.ts'
+import { deriveReplayScript, parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import { describe, expect, it } from 'vitest'
 
 const snapshotsDir = join(dirname(fileURLToPath(import.meta.url)), 'snapshots')
@@ -45,6 +46,10 @@ const credentialsConfigPath = fileURLToPath(new URL('../credentials.cordis.snaps
 const invalidCredentialScenarioDir = join(snapshotsDir, 'invalid-credential')
 const ralphScenarioDir = join(snapshotsDir, 'ralph-loop')
 const ralphConfigPath = fileURLToPath(new URL('../ralph.cordis.snapshot.yml', import.meta.url))
+const verifyScenarioDir = join(snapshotsDir, 'verify-compare')
+const verifySessionFixture = join(verifyScenarioDir, 'session.jsonl')
+const verifyStreamExpected = join(verifyScenarioDir, 'stream-json.expected.jsonl')
+const verifyConfigPath = fileURLToPath(new URL('../verify.cordis.snapshot.yml', import.meta.url))
 const settlementScenarioDir = join(snapshotsDir, 'subagent-settlement')
 const settlementConfigPath = fileURLToPath(new URL('../subagent-settlement.cordis.snapshot.yml', import.meta.url))
 const startupFailureConfigPath = fileURLToPath(new URL('./fixtures/startup-activation-error/cordis.yml', import.meta.url))
@@ -778,6 +783,56 @@ describe('headless stream-json snapshots', () => {
     const normalized = normalizeHeadlessStream(result.stdout, runCwd)
     if (refreshing) await writeFile(streamExpected, normalized)
     expect(normalized).toBe(await readFile(streamExpected, 'utf8'))
+  }, LOADER_SMOKE_TEST_TIMEOUT_MS)
+
+  it('replays a verify compare with its nested verifier call in log order', async () => {
+    const prompt = await scenarioPrompt(verifyScenarioDir, 'verify-compare')
+    const script = deriveReplayScript(parseSessionLog(await readFile(verifySessionFixture, 'utf8')))
+    expect(script).toHaveLength(3)
+    let runCwd = ''
+    const result = await runLoaderSmoke({
+      label: 'verify compare headless stream-json snapshot',
+      tempDirPrefix: 'headless-snapshot-verify-compare-',
+      binScript,
+      libBinScript: binScript,
+      configPath: verifyConfigPath,
+      binArgs: [verifyConfigPath, prompt],
+      tsconfigPath,
+      env: {
+        DSH_SNAPSHOT: 'replay',
+        DSH_SNAPSHOT_FILE: verifySessionFixture,
+        NODE_OPTIONS: [process.env.NODE_OPTIONS, '--disable-warning=ExperimentalWarning'].filter(Boolean).join(' '),
+      },
+      prepare: (cwd) => { runCwd = cwd },
+      inspect: async (cwd) => {
+        const logs = await persistedLogs(cwd)
+        expect(logs).toHaveLength(1)
+        const records = parseJsonl(logs[0]?.content ?? '')
+        const calls = records.filter(record => record.type === 'tool/call')
+        expect(calls.map(record => (record.data as JsonObject | undefined)?.name)).toEqual(['verify'])
+        const nested = records.filter(record => record.type === 'verifier/call')
+        expect(nested).toHaveLength(1)
+        expect(nested[0]?.data).toMatchObject({
+          providerId: 'conversation',
+          pair: [0, 1],
+          criterionId: 'contract',
+          repetition: 0,
+          ok: true,
+        })
+        const resultRecord = records.find(record => record.type === 'tool/result')
+        const resultData = resultRecord?.data as JsonObject | undefined
+        const message = resultData?.message as JsonObject | undefined
+        const content = message?.content as JsonObject[] | undefined
+        expect(content?.[0]?.isError).toBe(false)
+        expect(JSON.stringify(content?.[0]?.content)).toContain('Winner A')
+        expect(JSON.stringify(content?.[0]?.content)).toContain('contract')
+      },
+    })
+
+    expect(result.stderr).toBe('')
+    const normalized = normalizeHeadlessStream(result.stdout, runCwd)
+    if (refreshing) await writeFile(verifyStreamExpected, normalized)
+    expect(normalized).toBe(await readFile(verifyStreamExpected, 'utf8'))
   }, LOADER_SMOKE_TEST_TIMEOUT_MS)
 
   it('delivers a continuable child result without parent polling', async () => {

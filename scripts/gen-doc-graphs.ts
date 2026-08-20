@@ -79,6 +79,7 @@ const GROUP_ORDER = [
   'tasks',
   'workflow',
   'web',
+  'verifier',
   'spill',
   'todo',
   'plan',
@@ -486,6 +487,15 @@ const SERVICE_ROLES: ServiceRole[] = [
     implementations: ['web-search-exa', 'web-search-perplexity', 'web-search-deepseek', 'web-fetch-http'],
     consumers: ['tool-web'],
     note: 'Search and fetch providers register into one ctx.web seam; tool-web owns the stable model-facing names.',
+  },
+  {
+    key: 'verifier',
+    pkg: 'verifier',
+    title: 'Pairwise verifier registry',
+    mode: 'seam',
+    implementations: ['verifier-conversation'],
+    consumers: ['tool-verifier'],
+    note: 'Providers register into ctx.verifier; tool-verifier owns the model-facing verify tool.',
   },
   {
     key: 'spillStore',

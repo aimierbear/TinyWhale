@@ -1,0 +1,8 @@
+{
+  "steps": [
+    {
+      "op": "prompt",
+      "text": "Run one verify compare over the supplied candidates and report the winner."
+    }
+  ]
+}

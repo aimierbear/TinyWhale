@@ -1,0 +1,20 @@
+# Keyless verify snapshot: the model asks verify(compare), the nested verifier
+# call derives from its log-order verifier/call event, then a following outer
+# model call closes the turn.
+- id: base
+  name: '@deepseek-ai/cordis-plugin-include'
+  config:
+    path: ./cordis.yml
+    patches:
+      - id: llm-deepseek
+        name: '@deepseek-ai/dsh-llm-deepseek'
+        disabled: true
+      - insert:
+          - id: llm-replay
+            name: '@deepseek-ai/dsh-llm-replay'
+          - id: verifier
+            name: '@deepseek-ai/dsh-verifier'
+          - id: verifier-conversation
+            name: '@deepseek-ai/dsh-verifier-conversation'
+          - id: tool-verifier
+            name: '@deepseek-ai/dsh-tool-verifier'

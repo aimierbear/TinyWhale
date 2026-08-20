@@ -291,6 +291,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../packages/todo/tool-todo
+      '@deepseek-ai/dsh-tool-verifier':
+        specifier: workspace:^
+        version: link:../../packages/verifier/tool-verifier
       '@deepseek-ai/dsh-tool-web':
         specifier: workspace:^
         version: link:../../packages/web/tool-web
@@ -959,6 +962,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../packages/todo/tool-todo
+      '@deepseek-ai/dsh-tool-verifier':
+        specifier: workspace:^
+        version: link:../../packages/verifier/tool-verifier
       '@deepseek-ai/dsh-tool-web':
         specifier: workspace:^
         version: link:../../packages/web/tool-web
@@ -983,6 +989,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../packages/interaction/user-questions
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../../packages/verifier/verifier
+      '@deepseek-ai/dsh-verifier-conversation':
+        specifier: workspace:^
+        version: link:../../packages/verifier/verifier-conversation
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../../packages/web/web
@@ -1310,6 +1322,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:*
         version: link:../packages/todo/tool-todo
+      '@deepseek-ai/dsh-tool-verifier':
+        specifier: workspace:*
+        version: link:../packages/verifier/tool-verifier
       '@deepseek-ai/dsh-tool-web':
         specifier: workspace:*
         version: link:../packages/web/tool-web
@@ -1325,6 +1340,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:*
         version: link:../packages/interaction/user-questions
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:*
+        version: link:../packages/verifier/verifier
+      '@deepseek-ai/dsh-verifier-conversation':
+        specifier: workspace:*
+        version: link:../packages/verifier/verifier-conversation
       '@deepseek-ai/dsh-web':
         specifier: workspace:*
         version: link:../packages/web/web
@@ -1778,6 +1799,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../todo/tool-todo
+      '@deepseek-ai/dsh-tool-verifier':
+        specifier: workspace:^
+        version: link:../../verifier/tool-verifier
       '@deepseek-ai/dsh-tool-web':
         specifier: workspace:^
         version: link:../../web/tool-web
@@ -1799,6 +1823,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../interaction/user-questions
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../../verifier/verifier
+      '@deepseek-ai/dsh-verifier-conversation':
+        specifier: workspace:^
+        version: link:../../verifier/verifier-conversation
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../../web/web
@@ -8429,6 +8459,9 @@ importers:
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../../verifier/verifier
 
   packages/test-support/loader-smoke:
     dependencies:
@@ -8641,6 +8674,93 @@ importers:
       '@deepseek-ai/dsh-invariants':
         specifier: workspace:^
         version: link:../../runtime-diagnostics/invariants
+
+  packages/verifier/tool-verifier:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/cordis-plugin-include':
+        specifier: workspace:^
+        version: link:../../../vendor/include
+      '@deepseek-ai/cordis-plugin-loader':
+        specifier: workspace:^
+        version: link:../../../vendor/loader
+      '@deepseek-ai/dsh-agent':
+        specifier: workspace:^
+        version: link:../../core/agent
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-system-prompt':
+        specifier: workspace:^
+        version: link:../../core/system-prompt
+      '@deepseek-ai/dsh-tools':
+        specifier: workspace:^
+        version: link:../../core/tools
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../verifier
+      '@deepseek-ai/dsh-verifier-conversation':
+        specifier: workspace:^
+        version: link:../verifier-conversation
+
+  packages/verifier/verifier:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+
+  packages/verifier/verifier-conversation:
+    dependencies:
+      '@deepseek-ai/schemastery':
+        specifier: link:../../../vendor/schemastery
+        version: link:../../../vendor/schemastery
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../llm/llm
+      '@deepseek-ai/dsh-llm-deepseek':
+        specifier: workspace:^
+        version: link:../../llm/llm-deepseek
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../core/session
+      '@deepseek-ai/dsh-timeout':
+        specifier: workspace:^
+        version: link:../../util/timeout
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../verifier
 
   packages/web/tool-web:
     dependencies:
@@ -9275,6 +9395,9 @@ importers:
       '@deepseek-ai/dsh-tool-todo':
         specifier: workspace:^
         version: link:../../packages/todo/tool-todo
+      '@deepseek-ai/dsh-tool-verifier':
+        specifier: workspace:^
+        version: link:../../packages/verifier/tool-verifier
       '@deepseek-ai/dsh-tool-web':
         specifier: workspace:^
         version: link:../../packages/web/tool-web
@@ -9293,6 +9416,12 @@ importers:
       '@deepseek-ai/dsh-user-questions':
         specifier: workspace:^
         version: link:../../packages/interaction/user-questions
+      '@deepseek-ai/dsh-verifier':
+        specifier: workspace:^
+        version: link:../../packages/verifier/verifier
+      '@deepseek-ai/dsh-verifier-conversation':
+        specifier: workspace:^
+        version: link:../../packages/verifier/verifier-conversation
       '@deepseek-ai/dsh-web':
         specifier: workspace:^
         version: link:../../packages/web/web
