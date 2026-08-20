@@ -519,9 +519,14 @@ describe('ConversationVerifierProvider', () => {
           return
         }
         this.started += 1
+        const signal = options.signal
         await new Promise<void>((_resolve, reject) => {
-          options.signal?.addEventListener('abort', () => {
-            reject(options.signal.reason instanceof Error ? options.signal.reason : new Error('aborted'))
+          if (signal === undefined) {
+            reject(new Error('missing abort signal'))
+            return
+          }
+          signal.addEventListener('abort', () => {
+            reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'))
           }, { once: true })
         })
       }
