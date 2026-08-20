@@ -27,9 +27,6 @@
       "path": "../../llm/llm"
     },
     {
-      "path": "../../util/timeout"
-    },
-    {
       "path": "../verifier"
     },
     {

@@ -9052,9 +9052,6 @@ importers:
       '@deepseek-ai/dsh-subagent':
         specifier: workspace:^
         version: link:../../subagent/subagent
-      '@deepseek-ai/dsh-timeout':
-        specifier: workspace:^
-        version: link:../../util/timeout
       '@deepseek-ai/dsh-verifier':
         specifier: workspace:^
         version: link:../verifier
