@@ -10,6 +10,7 @@ import type { TinyWhaleUpdateApplyResult, TinyWhaleUpdateStatus } from './types.
 import {
   DEFAULT_UPSTREAM_BRANCH, DEFAULT_UPSTREAM_REMOTE, DEFAULT_UPSTREAM_URL,
 } from './types.ts'
+import { isTinyWhaleOverlayPath, TINYWHALE_OVERLAY_PATHS, overlayGitPath } from './overlay.ts'
 
 /** Resolved Host config for one checkout. */
 export interface TinyWhaleUpdateConfig {
@@ -33,6 +34,7 @@ const FETCH_MS = 120_000
 const INSTALL_MS = 300_000
 const MARKER = 'TINYWHALE.md'
 const LOCKFILE = 'pnpm-lock.yaml'
+const OVERLAY_FAST_FORWARD_MESSAGE = 'chore(tinywhale): keep overlay after upstream fast-forward'
 
 /**
  * Walk parents of `startPath` until `TINYWHALE.md` is found.
@@ -117,6 +119,8 @@ let applying = false
 
 /**
  * Fetch the configured upstream remote and merge it into the current branch.
+ * After the merge, restore {@link TINYWHALE_OVERLAY_PATHS} from the pre-merge
+ * HEAD so branding files stay TinyWhale even when only upstream edited them.
  * @param startPath - discovery start (the Host plugin module path).
  * @param config - resolved remote/branch.
  * @param signal - RPC cancellation.
@@ -160,12 +164,8 @@ export async function applyTinyWhaleUpdate(
     }
 
     const before = await gitText(run, root, ['rev-parse', 'HEAD'], signal)
-    try {
-      await gitText(run, root, ['merge', '--no-edit', ref], signal)
-    } catch (error) {
-      await gitOk(run, root, ['merge', '--abort'], signal)
-      return classifyMergeFailure(error)
-    }
+    const merged = await mergeUpstreamKeepingOverlay(run, root, ref, before, signal)
+    if (merged !== undefined) return merged
 
     const changed = await gitText(run, root, ['diff', '--name-only', before, 'HEAD'], signal)
     if (!changed.split('\n').includes(LOCKFILE)) {
@@ -225,8 +225,82 @@ async function resolveRemoteRef(
   throw new Error(`upstream branch ${named} is missing`)
 }
 
+/**
+ * Merge `ref`, restore TinyWhale overlay paths from `before`, and finish the
+ * commit. Overlay-only conflicts keep ours; any other unmerged path aborts.
+ * @param run - Git runner.
+ * @param root - Checkout root.
+ * @param ref - Remote-tracking ref to merge.
+ * @param before - Pre-merge HEAD.
+ * @param signal - RPC cancellation.
+ * @returns a closed failure when the merge cannot finish, otherwise undefined.
+ */
+async function mergeUpstreamKeepingOverlay(
+  run: NativeCommandRunner,
+  root: string,
+  ref: string,
+  before: string,
+  signal: AbortSignal,
+): Promise<TinyWhaleUpdateApplyResult | undefined> {
+  let mergeError: unknown
+  try {
+    await gitText(run, root, ['merge', '--no-commit', '--no-edit', ref], signal)
+  } catch (error) {
+    mergeError = error
+  }
+  const merging = await gitOk(run, root, ['rev-parse', '-q', '--verify', 'MERGE_HEAD'], signal)
+  if (mergeError !== undefined && !merging) return classifyMergeFailure(mergeError)
+
+  const overlay = await overlayPathsInTree(run, root, before, signal)
+  const overlayFiles = overlay.filter(entry => !entry.directory).map(entry => entry.gitPath)
+  const overlayDirs = overlay.filter(entry => entry.directory).map(entry => entry.gitPath)
+  if (overlayFiles.length > 0) {
+    await gitText(run, root, ['checkout', before, '--', ...overlayFiles], signal)
+  }
+  if (overlayDirs.length > 0) {
+    await gitText(run, root, ['checkout', '--no-overlay', before, '--', ...overlayDirs], signal)
+  }
+  const unmerged = (await gitText(run, root, ['diff', '--name-only', '--diff-filter=U'], signal))
+    .split('\n')
+    .filter(path => path !== '')
+  const leftover = unmerged.filter(path => !isTinyWhaleOverlayPath(path))
+  if (leftover.length > 0) {
+    await gitOk(run, root, ['merge', '--abort'], signal)
+    return classifyMergeFailure(mergeError ?? new Error(`CONFLICT ${leftover.join(' ')}`))
+  }
+  if (unmerged.length > 0) {
+    await gitText(run, root, ['checkout', '--ours', '--', ...unmerged], signal)
+    await gitText(run, root, ['add', '--', ...unmerged], signal)
+  }
+  if (merging) {
+    await gitText(run, root, ['commit', '--no-edit'], signal)
+    return undefined
+  }
+  const dirty = await gitText(run, root, ['status', '--porcelain'], signal)
+  if (dirty !== '') {
+    await gitText(run, root, ['commit', '-m', OVERLAY_FAST_FORWARD_MESSAGE], signal)
+  }
+  return undefined
+}
+
+async function overlayPathsInTree(
+  run: NativeCommandRunner,
+  root: string,
+  tree: string,
+  signal: AbortSignal,
+): Promise<{ gitPath: string; directory: boolean }[]> {
+  const present: { gitPath: string; directory: boolean }[] = []
+  for (const entry of TINYWHALE_OVERLAY_PATHS) {
+    const gitPath = overlayGitPath(entry)
+    if (await gitOk(run, root, ['cat-file', '-e', `${tree}:${gitPath}`], signal)) {
+      present.push({ gitPath, directory: entry.endsWith('/') })
+    }
+  }
+  return present
+}
+
 function classifyMergeFailure(error: unknown): TinyWhaleUpdateApplyResult {
-  const text = `${messageOf(error)}\n${stderrOf(error)}`
+  const text = `${messageOf(error)}\n${stdoutOf(error)}\n${stderrOf(error)}`
   if (/CONFLICT|Automatic merge failed/i.test(text)) {
     return { outcome: 'conflict', detail: truncate(text) }
   }
@@ -265,12 +339,20 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function stderrOf(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'stderr' in error) {
-    const stderr = (error as { stderr?: unknown }).stderr
-    return typeof stderr === 'string' ? stderr : ''
+function streamOf(error: unknown, key: 'stdout' | 'stderr'): string {
+  if (typeof error === 'object' && error !== null && key in error) {
+    const value = (error as Record<string, unknown>)[key]
+    return typeof value === 'string' ? value : ''
   }
   return ''
+}
+
+function stdoutOf(error: unknown): string {
+  return streamOf(error, 'stdout')
+}
+
+function stderrOf(error: unknown): string {
+  return streamOf(error, 'stderr')
 }
 
 function truncate(text: string): string {

@@ -8,6 +8,7 @@ import {
   applyTinyWhaleUpdate, defaultCommands, describeTinyWhaleCheckout, findTinyWhaleRoot,
   resolveUpdateConfig,
 } from '../src/checkout.ts'
+import { isTinyWhaleOverlayPath } from '../src/overlay.ts'
 import { DEFAULT_UPSTREAM_REMOTE, DEFAULT_UPSTREAM_URL } from '../src/types.ts'
 
 const NEVER = new AbortController().signal
@@ -42,6 +43,17 @@ function commitFile(dir: string, name: string, body: string, message: string): v
   git(dir, ['add', name])
   git(dir, ['commit', '-m', message])
 }
+
+describe('isTinyWhaleOverlayPath', () => {
+  it('matches files and directory prefixes from the overlay list', () => {
+    expect(isTinyWhaleOverlayPath('README.md')).toBe(true)
+    expect(isTinyWhaleOverlayPath('apps/web/index.html')).toBe(true)
+    expect(isTinyWhaleOverlayPath('desktop/src/main.mjs')).toBe(true)
+    expect(isTinyWhaleOverlayPath('packages/verifier/tool-verifier/package.json')).toBe(true)
+    expect(isTinyWhaleOverlayPath('packages/client/web/src/boot-page.ts')).toBe(false)
+    expect(isTinyWhaleOverlayPath('file.txt')).toBe(false)
+  })
+})
 
 describe('defaultCommands', () => {
   it('rejects a missing install directory', async () => {
@@ -207,6 +219,88 @@ describe('applyTinyWhaleUpdate', () => {
     expect(install).not.toHaveBeenCalled()
   })
 
+  it('keeps overlay files when only upstream edited them', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-overlay-theirs-'))
+    const upstream = join(tmp, 'upstream')
+    const local = join(tmp, 'local')
+    initRepo(upstream)
+    write(join(upstream, 'README.md'), 'tinywhale\n')
+    git(upstream, ['add', 'README.md'])
+    git(upstream, ['commit', '-m', 'overlay'])
+    clone(upstream, local)
+    git(local, ['remote', 'rename', 'origin', 'upstream'])
+    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
+    commitFile(upstream, 'other.txt', 'new\n', 'upstream-other')
+    const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
+    expect(result).toEqual({ outcome: 'updated', installed: false })
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+      .toBe('tinywhale\n')
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:other.txt'], { encoding: 'utf8' }))
+      .toBe('new\n')
+  })
+
+  it('drops files upstream added under an overlay directory', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-overlay-dir-'))
+    const upstream = join(tmp, 'upstream')
+    const local = join(tmp, 'local')
+    initRepo(upstream)
+    mkdirSync(join(upstream, 'desktop'), { recursive: true })
+    write(join(upstream, 'desktop', 'ours.txt'), 'ours\n')
+    git(upstream, ['add', 'desktop/ours.txt'])
+    git(upstream, ['commit', '-m', 'desktop'])
+    clone(upstream, local)
+    git(local, ['remote', 'rename', 'origin', 'upstream'])
+    commitFile(upstream, 'desktop/theirs.txt', 'theirs\n', 'upstream-desktop')
+    const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
+    expect(result).toEqual({ outcome: 'updated', installed: false })
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:desktop/ours.txt'], { encoding: 'utf8' }))
+      .toBe('ours\n')
+    expect(execFileSync('git', ['-C', local, 'ls-tree', '-r', '--name-only', 'HEAD'], { encoding: 'utf8' }))
+      .not.toContain('desktop/theirs.txt')
+  })
+
+  it('aborts when a non-overlay path still conflicts after overlay restore', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-overlay-mixed-'))
+    const upstream = join(tmp, 'upstream')
+    const local = join(tmp, 'local')
+    initRepo(upstream)
+    write(join(upstream, 'README.md'), 'base\n')
+    git(upstream, ['add', 'README.md'])
+    git(upstream, ['commit', '-m', 'readme'])
+    clone(upstream, local)
+    git(local, ['remote', 'rename', 'origin', 'upstream'])
+    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
+    commitFile(upstream, 'file.txt', 'upstream\n', 'upstream-file')
+    commitFile(local, 'README.md', 'tinywhale\n', 'local-readme')
+    commitFile(local, 'file.txt', 'local\n', 'local-file')
+    const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
+    expect(result.outcome).toBe('conflict')
+    expect(execFileSync('git', ['-C', local, 'status', '--porcelain'], { encoding: 'utf8' }).trim())
+      .toBe('')
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+      .toBe('tinywhale\n')
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:file.txt'], { encoding: 'utf8' }))
+      .toBe('local\n')
+  })
+
+  it('keeps overlay files when both sides edited them', async () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-overlay-both-'))
+    const upstream = join(tmp, 'upstream')
+    const local = join(tmp, 'local')
+    initRepo(upstream)
+    write(join(upstream, 'README.md'), 'base\n')
+    git(upstream, ['add', 'README.md'])
+    git(upstream, ['commit', '-m', 'readme'])
+    clone(upstream, local)
+    git(local, ['remote', 'rename', 'origin', 'upstream'])
+    commitFile(upstream, 'README.md', 'deepseek\n', 'upstream-readme')
+    commitFile(local, 'README.md', 'tinywhale\n', 'local-readme')
+    const result = await applyTinyWhaleUpdate(local, resolveUpdateConfig(), NEVER)
+    expect(result).toEqual({ outcome: 'updated', installed: false })
+    expect(execFileSync('git', ['-C', local, 'show', 'HEAD:README.md'], { encoding: 'utf8' }))
+      .toBe('tinywhale\n')
+  })
+
   it('aborts a conflicting merge', async () => {
     const tmp = mkdtempSync(join(tmpdir(), 'tinywhale-conflict-'))
     const upstream = join(tmp, 'upstream')
@@ -294,6 +388,7 @@ describe('applyTinyWhaleUpdate', () => {
         if (args.includes('status')) return { stdout: '', stderr: '' }
         if (args.includes('get-url')) return { stdout: 'url', stderr: '' }
         if (args.includes('fetch')) return { stdout: '', stderr: '' }
+        if (args.includes('MERGE_HEAD')) throw new Error('no MERGE_HEAD')
         if (args.includes('rev-parse') && args.includes('--verify')) return { stdout: 'upstream/master', stderr: '' }
         if (args.includes('merge-base')) {
           const error = Object.assign(new Error('not an ancestor'), { code: 1, stdout: '', stderr: '' })
@@ -317,6 +412,7 @@ describe('applyTinyWhaleUpdate', () => {
         if (args.includes('status')) return { stdout: '', stderr: '' }
         if (args.includes('get-url')) return { stdout: 'url', stderr: '' }
         if (args.includes('fetch')) return { stdout: '', stderr: '' }
+        if (args.includes('MERGE_HEAD')) throw new Error('no MERGE_HEAD')
         if (args.includes('rev-parse') && args.includes('--verify')) return { stdout: 'upstream/master', stderr: '' }
         if (args.includes('merge-base')) throw Object.assign(new Error('behind'), { stderr: 1 })
         if (args.includes('rev-parse') && args.includes('HEAD')) return { stdout: 'aaa', stderr: '' }
@@ -332,6 +428,7 @@ describe('applyTinyWhaleUpdate', () => {
         if (args.includes('status')) return { stdout: '', stderr: '' }
         if (args.includes('get-url')) return { stdout: 'url', stderr: '' }
         if (args.includes('fetch')) return { stdout: '', stderr: '' }
+        if (args.includes('MERGE_HEAD')) throw new Error('no MERGE_HEAD')
         if (args.includes('rev-parse') && args.includes('--verify')) return { stdout: 'upstream/master', stderr: '' }
         if (args.includes('merge-base')) throw 42
         if (args.includes('rev-parse') && args.includes('HEAD')) return { stdout: 'aaa', stderr: '' }
