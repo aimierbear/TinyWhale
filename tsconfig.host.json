@@ -244,6 +244,7 @@
     { "path": "./packages/verifier/verifier" },
     { "path": "./packages/verifier/verifier-conversation" },
     { "path": "./packages/verifier/tool-verifier" },
+    { "path": "./packages/verifier/command-verify" },
     { "path": "./packages/spill/spill" },
     { "path": "./packages/spill/spill-local" },
     { "path": "./packages/spill/spill-policy" },

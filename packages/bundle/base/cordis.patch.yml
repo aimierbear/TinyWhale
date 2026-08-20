@@ -430,6 +430,11 @@
     - id: tool-verifier
       name: '@deepseek-ai/dsh-tool-verifier'
 
+    # Human slash command: run parallel candidate attempts and submit the
+    # verifier-selected winner as an ordinary user message.
+    - id: command-verify
+      name: '@deepseek-ai/dsh-command-verify'
+
     # ── rows every mode mounts, whose values each overlay may state ──────────────
 
     # The tool registry. Presentation mode is a deployment choice; omitting it here

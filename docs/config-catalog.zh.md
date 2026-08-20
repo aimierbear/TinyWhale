@@ -492,6 +492,34 @@ export interface Config {
 
 来源：[`packages/code-runtime/code-runtime-worker-thread/src/index.ts:25`](../packages/code-runtime/code-runtime-worker-thread/src/index.ts)
 
+<a id="deepseek-aidsh-command-verify"></a>
+
+## `@deepseek-ai/dsh-command-verify`
+
+需要：`commands` · `subagents` · `verifier`
+
+```ts config-catalog
+/** Deployment policy for one `/verify` invocation. */
+export interface Config {
+  /** Parallel candidate attempts started per invocation. */
+  readonly trials?: number
+  /** Registered `ctx.subagents` provider name used for each candidate run. */
+  readonly provider?: string
+  /** Pivot count forwarded to the verifier tournament. */
+  readonly pivots?: number
+  /** Repeated verifications per directed pair forwarded to the verifier. */
+  readonly nVerifications?: number
+  /** Ring-pass seed forwarded to the verifier tournament. */
+  readonly seed?: number
+  /** Skip the tournament when a strict majority of candidates agree verbatim. */
+  readonly majorityVoting?: boolean
+  /** End-to-end deadline for the whole `/verify` command. */
+  readonly timeoutMs?: number
+}
+```
+
+来源：[`packages/verifier/command-verify/src/index.ts:39`](../packages/verifier/command-verify/src/index.ts)
+
 <a id="deepseek-aidsh-compaction-basic"></a>
 
 ## `@deepseek-ai/dsh-compaction-basic`
