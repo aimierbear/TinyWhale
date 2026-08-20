@@ -45,6 +45,14 @@ interface CommandDefinition {
    * that payload in the session log.
    */
   readonly recordInput?: boolean
+  /**
+   * When true, a thenable handler return admits `execute` immediately with
+   * `{ kind: 'success' }` while the thenable continues. `command/done` still
+   * records that later settlement. A synchronous handler result, image
+   * admission failure, or omitted/false flag still settles `execute` before
+   * it returns. The flag is host-only and is not advertised on descriptors.
+   */
+  readonly background?: boolean
   /** Execute against the receiving agent without sending the command to the model. */
   readonly handler: (invocation: CommandInvocation) => CommandResult | Promise<CommandResult>
 }
@@ -171,12 +179,20 @@ find(agent: Agent, name: string): CommandDefinition | undefined
  * and an exceeded attachment limit each settle as an error result before
  * the handler runs, and a rejected batch publishes no durable object.
  *
+ * A definition with `background: true` whose handler returns a thenable
+ * admits immediately: `execute` returns `{ kind: 'success' }` with the
+ * minted `commandId` while the thenable continues, and `command/done`
+ * still appends when that thenable settles. A synchronous handler result,
+ * image admission failure, or non-background command still awaits
+ * settlement before `execute` returns.
+ *
  * @param agent - exact receiving agent.
  * @param line - complete slash-command line.
  * @param images - base64-encoded composer images accompanying the line, in
  *   submission order; empty for a plain invocation.
  * @param signal - cancellation signal owned by the UI request.
- * @returns the settled execution (result + lifecycle pairing id), or
+ * @returns the settled execution (result + lifecycle pairing id), an
+ *   admission success for a still-running background thenable, or
  *   `undefined` when syntax or name does not resolve.
  */
 @Remote async execute( agent: Agent, line: string, images: readonly EncodedImageAttachment[], signal: AbortSignal, ): Promise<CommandExecution | undefined>
@@ -184,7 +200,7 @@ find(agent: Agent, name: string): CommandDefinition | undefined
 
 Types: [Agent](core.md) · [EncodedImageAttachment](attachment.md)
 
-Source: [`packages/interaction/commands/src/index.ts:250`](../../packages/interaction/commands/src/index.ts)
+Source: [`packages/interaction/commands/src/index.ts:270`](../../packages/interaction/commands/src/index.ts)
 
 <a id="commands-events"></a>
 

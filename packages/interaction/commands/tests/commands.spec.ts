@@ -168,6 +168,10 @@ describe('CommandRuntime', () => {
       ...command('input-type'),
       input: null,
     } as unknown as CommandDefinition)).toThrow('command "input-type" input hint must be a string')
+    expect(() => ctx.commands.register({
+      ...command('background-type'),
+      background: 'yes',
+    } as unknown as CommandDefinition)).toThrow('command "background-type" background flag must be a boolean')
   })
 
   it('passes exact invocation context and detaches valid handler results', async () => {
@@ -397,6 +401,107 @@ describe('CommandRuntime', () => {
       { type: 'command/run', data: { name: 'boom' } },
       { type: 'command/done', data: { kind: 'error', text: 'handler exploded' } },
     ])
+  })
+
+  it('admits a background thenable before the handler settles and logs command/done later', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    let release!: (result: { kind: 'success'; text: string }) => void
+    ctx.commands.register({
+      name: 'slow',
+      description: 'Slow',
+      background: true,
+      handler: () => new Promise((resolve) => { release = resolve }),
+    })
+    const execution = await ctx.commands.execute(agent, '/slow later', [], new AbortController().signal)
+    expect(execution?.result).toEqual({ kind: 'success' })
+    expect(execution?.commandId).toBeTruthy()
+    expect(lifecycleOf(agent)).toMatchObject([
+      { type: 'command/run', data: { name: 'slow', args: ' later' } },
+    ])
+    expect(ctx.commands.list(agent)[0]).toEqual({ name: 'slow', description: 'Slow' })
+    expect(ctx.commands.find(agent, 'slow')?.background).toBe(true)
+    release({ kind: 'success', text: 'done later' })
+    await vi.waitFor(() => {
+      expect(lifecycleOf(agent)).toMatchObject([
+        { type: 'command/run', data: { name: 'slow' } },
+        { type: 'command/done', data: { kind: 'success', text: 'done later' } },
+      ])
+    })
+  })
+
+  it('settles a background command\'s synchronous result on execute', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    ctx.commands.register({
+      name: 'bg-sync',
+      description: 'Sync background',
+      background: true,
+      handler: () => ({ kind: 'error', text: 'bad args' }),
+    })
+    const execution = await ctx.commands.execute(agent, '/bg-sync', [], new AbortController().signal)
+    expect(execution?.result).toEqual({ kind: 'error', text: 'bad args' })
+    expect(lifecycleOf(agent)).toMatchObject([
+      { type: 'command/run', data: { name: 'bg-sync' } },
+      { type: 'command/done', data: { kind: 'error', text: 'bad args' } },
+    ])
+  })
+
+  it('omits an explicit false background flag and still waits for the handler', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    let release!: (result: { kind: 'success'; text: string }) => void
+    ctx.commands.register({
+      name: 'wait-false',
+      description: 'Wait',
+      background: false,
+      handler: () => new Promise((resolve) => { release = resolve }),
+    })
+    expect(ctx.commands.find(agent, 'wait-false')?.background).toBeUndefined()
+    const pending = ctx.commands.execute(agent, '/wait-false', [], new AbortController().signal)
+    await vi.waitFor(() => { expect(lifecycleOf(agent)).toHaveLength(1) })
+    release({ kind: 'success', text: 'waited' })
+    await expect(pending).resolves.toMatchObject({ result: { kind: 'success', text: 'waited' } })
+  })
+
+  it('records command/done after a background handler rejects without rejecting execute', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    let fail!: (error: Error) => void
+    ctx.commands.register({
+      name: 'bg-reject',
+      description: 'Reject later',
+      background: true,
+      handler: () => new Promise((_, reject) => { fail = reject }),
+    })
+    const execution = await ctx.commands.execute(agent, '/bg-reject', [], new AbortController().signal)
+    expect(execution?.result).toEqual({ kind: 'success' })
+    fail(new Error('later boom'))
+    await vi.waitFor(() => {
+      expect(lifecycleOf(agent)).toMatchObject([
+        { type: 'command/run', data: { name: 'bg-reject' } },
+        { type: 'command/done', data: { kind: 'error', text: 'later boom' } },
+      ])
+    })
+  })
+
+  it('records command/done after a background handler returns a malformed result', async () => {
+    const ctx = await mount()
+    const { agent } = await mintAgentScope(ctx, 'a')
+    ctx.commands.register({
+      name: 'bg-malformed',
+      description: 'Malformed later',
+      background: true,
+      handler: () => Promise.resolve({ kind: 'future' } as never),
+    })
+    const execution = await ctx.commands.execute(agent, '/bg-malformed', [], new AbortController().signal)
+    expect(execution?.result).toEqual({ kind: 'success' })
+    await vi.waitFor(() => {
+      expect(lifecycleOf(agent)).toMatchObject([
+        { type: 'command/run', data: { name: 'bg-malformed' } },
+        { type: 'command/done', data: { kind: 'error', text: 'command "bg-malformed" returned unknown result kind "future"' } },
+      ])
+    })
   })
 
   it('logs command/done kind error when the signal aborts a hanging handler', async () => {

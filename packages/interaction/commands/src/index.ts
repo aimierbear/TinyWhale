@@ -64,6 +64,14 @@ export interface CommandDefinition {
    * that payload in the session log.
    */
   readonly recordInput?: boolean
+  /**
+   * When true, a thenable handler return admits `execute` immediately with
+   * `{ kind: 'success' }` while the thenable continues. `command/done` still
+   * records that later settlement. A synchronous handler result, image
+   * admission failure, or omitted/false flag still settles `execute` before
+   * it returns. The flag is host-only and is not advertised on descriptors.
+   */
+  readonly background?: boolean
   /** Execute against the receiving agent without sending the command to the model. */
   readonly handler: (invocation: CommandInvocation) => CommandResult | Promise<CommandResult>
 }
@@ -142,6 +150,14 @@ function renderThrown(value: unknown): string {
   }
 }
 
+/** True when a handler returned a thenable instead of a synchronous result. */
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return typeof value === 'object'
+    && value !== null
+    && 'then' in value
+    && typeof (value as { then?: unknown }).then === 'function'
+}
+
 /** Stop awaiting an uncooperative handler once its owning UI request aborts. */
 function withAbort<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(abortError(signal))
@@ -198,11 +214,15 @@ function normalizeDefinition(definition: CommandDefinition): RegisteredCommand {
       ...('images' in rawInput && rawInput.images === true) ? { images: true } : {},
     })
   }
+  if (definition.background !== undefined && typeof definition.background !== 'boolean') {
+    throw new TypeError(`command "${definition.name}" background flag must be a boolean`)
+  }
   const normalized = Object.freeze({
     name: definition.name,
     description: definition.description,
     ...input === undefined ? {} : { input },
     ...definition.recordInput === undefined ? {} : { recordInput: definition.recordInput },
+    ...definition.background === true ? { background: true } : {},
     handler: definition.handler,
   })
   const descriptor = Object.freeze({
@@ -317,12 +337,20 @@ export class CommandRuntime extends TypertRemoteService {
    * and an exceeded attachment limit each settle as an error result before
    * the handler runs, and a rejected batch publishes no durable object.
    *
+   * A definition with `background: true` whose handler returns a thenable
+   * admits immediately: `execute` returns `{ kind: 'success' }` with the
+   * minted `commandId` while the thenable continues, and `command/done`
+   * still appends when that thenable settles. A synchronous handler result,
+   * image admission failure, or non-background command still awaits
+   * settlement before `execute` returns.
+   *
    * @param agent - exact receiving agent.
    * @param line - complete slash-command line.
    * @param images - base64-encoded composer images accompanying the line, in
    *   submission order; empty for a plain invocation.
    * @param signal - cancellation signal owned by the UI request.
-   * @returns the settled execution (result + lifecycle pairing id), or
+   * @returns the settled execution (result + lifecycle pairing id), an
+   *   admission success for a still-running background thenable, or
    *   `undefined` when syntax or name does not resolve.
    */
   @Remote
@@ -387,12 +415,38 @@ export class CommandRuntime extends TypertRemoteService {
     let result: CommandResult
     try {
       const output = command.definition.handler(invocation)
+      if (command.definition.background === true && isThenable(output)) {
+        void Promise.resolve(output).then(
+          (value) => { this.settleBackground(agent.session, parsed.name, commandId, settle, value) },
+          (error: unknown) => { this.settleThrown(agent.session, parsed.name, commandId, error) },
+        )
+        return Object.freeze({ commandId, result: Object.freeze({ kind: 'success' as const }) })
+      }
       result = normalizeResult(parsed.name, await withAbort(Promise.resolve(output), signal))
     } catch (error: unknown) {
       this.settleThrown(agent.session, parsed.name, commandId, error)
       throw error
     }
     return settle(result)
+  }
+
+  /**
+   * Record `command/done` for a background handler that settled after
+   * `execute` already returned admission. Normalize and append failures stay
+   * on this path because the RPC caller is no longer waiting.
+   */
+  private settleBackground(
+    session: Session,
+    command: string,
+    commandId: CommandId,
+    settle: (result: CommandResult) => CommandExecution,
+    value: unknown,
+  ): void {
+    try {
+      settle(normalizeResult(command, value))
+    } catch (error: unknown) {
+      this.settleThrown(session, command, commandId, error)
+    }
   }
 
   /** Contained `command/done` error append for a thrown handler or admission failure. */
