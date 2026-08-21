@@ -165,7 +165,8 @@ export function rebrandReadme(text: string, lang: 'en' | 'zh'): string {
   }
   const license = parsed.sections.find(section =>
     section.heading === 'License' || section.heading === '许可证')
-  if (license !== undefined && !license.body.includes('NOTICE')) {
+  // THIRD_PARTY_NOTICES.md contains the substring NOTICE; require the fork file.
+  if (license !== undefined && !license.body.includes('[NOTICE](NOTICE)')) {
     license.body = lang === 'en'
       ? license.body.replace(
         'Third-party dependencies',
@@ -183,7 +184,7 @@ export function rebrandReadme(text: string, lang: 'en' | 'zh'): string {
       .replace('DeepSeek Harness is currently', 'The harness is currently')
       .replace('DeepSeek Harness 目前', '该 harness 目前')
   }
-  return rewriteClones(renderMarkdown(parsed))
+  return pinReadmeAnchors(rewriteClones(renderMarkdown(parsed)))
 }
 
 /** Stamp the product title and splash transparency onto the web index. */
@@ -294,6 +295,24 @@ function rewriteClones(text: string): string {
   return text
     .replaceAll(UPSTREAM_CLONE, FORK_CLONE)
     .replaceAll('\ncd deepseek-harness\n', '\ncd TinyWhale\n')
+}
+
+/**
+ * Keep stable HTML ids next to the headings user-guide links target.
+ * Section splitting on `## ` would otherwise leave `<a id="run">` on the
+ * previous heading after packaged/desktop sections are inserted.
+ */
+function pinReadmeAnchors(text: string): string {
+  return pinHtmlAnchor(
+    pinHtmlAnchor(text, 'run', /^## (?:Run|运行)$/m),
+    'run-from-source',
+    /^### (?:Run from source|从源码运行)$/m,
+  )
+}
+
+function pinHtmlAnchor(text: string, id: string, heading: RegExp): string {
+  const stripped = text.replaceAll(new RegExp(`<a id="${id}"></a>\\n*`, 'g'), '')
+  return stripped.replace(heading, `<a id="${id}"></a>\n\n$&`)
 }
 
 function appendSentence(body: string, sentence: string): string {

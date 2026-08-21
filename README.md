@@ -26,6 +26,8 @@ npm start
 
 The Electron shell attaches to `http://127.0.0.1:3080` when that address already serves the Web UI; otherwise it starts `dsh web` and opens the window. See [desktop/README.md](desktop/README.md).
 
+<a id="run"></a>
+
 ## Run
 
 ### Run from `npm`
@@ -37,6 +39,8 @@ npx @deepseek-ai/dsh web
 ```
 
 The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser for a local launch. An SSH launch only prints the host URL because the SSH client or editor owns the local forwarded address. Pass `--no-open` to run the server without opening a browser. See [Web UI guide](docs/user/guide/index.md).
+
+<a id="run-from-source"></a>
 
 ### Run from source
 
@@ -71,4 +75,4 @@ For agents, follow [AGENTS.md](AGENTS.md). Fork-specific layout is in [TINYWHALE
 
 [MIT](LICENSE)
 
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Upstream copyright is retained. Attribution is in [NOTICE](NOTICE). Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

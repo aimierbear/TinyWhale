@@ -55,6 +55,8 @@ DeepSeek Harness（\`dsh\`）是由 [DeepSeek AI](https://deepseek.com) 开发�
 
 DeepSeek Harness 目前处于 _开发者预览_ 阶段。
 
+<a id="run"></a>
+
 ## 运行
 
 ### 从源码运行
@@ -96,7 +98,8 @@ describe('rebrandReadme', () => {
     expect(next).toContain('aimierbear/TinyWhale/issues')
     expect(next).not.toContain('Join Discord')
     expect(next).toContain('TINYWHALE.md')
-    expect(next).toContain('NOTICE')
+    expect(next).toContain('[NOTICE](NOTICE)')
+    expect(next).toMatch(/<a id="run"><\/a>\n\n## Run/)
     expect(rebrandReadme(next, 'en')).toBe(next)
   })
 
@@ -108,7 +111,9 @@ describe('rebrandReadme', () => {
     expect(next).toContain('desktop/README.zh.md')
     expect(next).not.toContain('<table>')
     expect(next).toContain('本仓库 Issues')
-    expect(next).toContain('NOTICE')
+    expect(next).toContain('[NOTICE](NOTICE)')
+    expect(next).toMatch(/<a id="run"><\/a>\n\n## 运行/)
+    expect(next.indexOf('## 安装打包应用')).toBeLessThan(next.indexOf('<a id="run"></a>'))
     expect(rebrandReadme(next, 'zh')).toBe(next)
   })
 })

@@ -75,4 +75,4 @@ pnpm dsh web
 
 [MIT](LICENSE)
 
-第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+上游版权予以保留。归属声明见 [NOTICE](NOTICE)。第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
