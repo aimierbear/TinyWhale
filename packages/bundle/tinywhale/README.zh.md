@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-TinyWhale extras 作为 profile 组合包：[`cordis.patch.yml`](cordis.patch.yml) 在随发行版交付的 `web` 模板上，于 [`dsh-web-app`](../web-app/README.md) 之后插入默认的社区与第一方插件行。该包没有运行时 API；profile 组合器通过 manifest（元数据清单）的 `dsh.bundle.patch` 字段解析 patch，绝不通过代码。
+TinyWhale extras 作为 profile 组合包：[`cordis.patch.yml`](cordis.patch.yml) 在随发行版交付的 `web` 模板上，于 [`dsh-web-app`](../web-app/README.zh.md) 之后插入默认的社区与第一方插件行。该包没有运行时 API；profile 组合器通过 manifest（元数据清单）的 `dsh.bundle.patch` 字段解析 patch，绝不通过代码。
 
 被插入的包是本组合包的依赖，因此从本次安装解析。其中三个提交在 [`plugins/`](plugins/ORIGIN.md) 下（`dsh-fractal`、`dsh-security-codex`，以及 TinyWhale 打过补丁的 `dsh-better-sidebar`）；其余来自 npm 或钉死的 GitHub commit。后续的 profile 或 home `cordis.patch.yml` 仍可按 id 禁用或覆盖任一插入行。
 

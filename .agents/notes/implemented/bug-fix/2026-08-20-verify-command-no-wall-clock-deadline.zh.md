@@ -12,7 +12,7 @@ Status: implemented
 
 `dsh-command-verify` 不设置截止时间，也不依赖 `@deepseek-ai/dsh-timeout`。Config 没有 `timeoutMs`。候选的 `ctx.subagents.start` 调用和 `ctx.verifier.select` 直接接收 `invocation.signal`。选择过程一直运行到结算或该信号中止。
 
-每次 await 之后，若信号已中止，则把 `The verification was cancelled.` 作为插件来源的 `user/message` 追加且不唤醒驱动器，而不是把已中止候选的诊断文本当作获胜结果。只有 `completed` 且文本非空的运行会进入多数投票或 tournament。准入和 `command/done` 走 [background 命令路径](2026-08-20-background-command-admits-before-handler.md)。
+每次 await 之后，若信号已中止，则把 `The verification was cancelled.` 作为插件来源的 `user/message` 追加且不唤醒驱动器，而不是把已中止候选的诊断文本当作获胜结果。只有 `completed` 且文本非空的运行会进入多数投票或 tournament。准入和 `command/done` 走 [background 命令路径](2026-08-20-background-command-admits-before-handler.zh.md)。
 
 ## Testing
 

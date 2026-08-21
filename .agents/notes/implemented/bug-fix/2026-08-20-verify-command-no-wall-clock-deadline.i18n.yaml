@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/bug-fix/2026-08-20-verify-command-no-wall-clock-deadline.md
 2026-08-20-verify-command-no-wall-clock-deadline.md: 063ef3a02033a5b16efd437a75f270ac3f7e95c7
-2026-08-20-verify-command-no-wall-clock-deadline.zh.md: 15e283a0292df63e78f0ae451e8a11e1402f604e
+2026-08-20-verify-command-no-wall-clock-deadline.zh.md: 9f728d2bce6381abd95ee19bcea1759f43a0ce38

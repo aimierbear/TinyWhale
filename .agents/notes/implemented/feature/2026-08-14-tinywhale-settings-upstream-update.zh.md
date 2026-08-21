@@ -10,7 +10,7 @@ TinyWhale 是 DeepSeek Harness 的 git 检出。更新它意味着离开应用�
 
 ## Decision
 
-[`@deepseek-ai/dsh-client-ui-settings-update`](../../../../packages/client/ui-settings-update/README.md) 同时拥有两端。Host 注册仅 loopback 可用的 `/tinywhale` Connection 通道（`status`、`apply`），而不扩展共享的 `RpcMethodMap`，因此这次特权 git 写入不会走 Typert 的 trusted-host 拦截器，也不会进入每次上游合并都会碰到的 apiproxy 表面。
+[`@deepseek-ai/dsh-client-ui-settings-update`](../../../../packages/client/ui-settings-update/README.zh.md) 同时拥有两端。Host 注册仅 loopback 可用的 `/tinywhale` Connection 通道（`status`、`apply`），而不扩展共享的 `RpcMethodMap`，因此这次特权 git 写入不会走 Typert 的 trusted-host 拦截器，也不会进入每次上游合并都会碰到的 apiproxy 表面。
 
 `status` 从本插件模块路径（以及 `process.cwd()`）向上查找 `TINYWHALE.md` 与 `.git`，并且不 fetch。`apply` 在工作区有未提交更改或 detached HEAD 时拒绝执行；若缺少 `upstream` 远程则添加它（默认 URL 为 `https://github.com/deepseek-ai/deepseek-harness.git`），然后 fetch，并合并 `upstream/master`（若该分支名不存在则使用远程 HEAD）。冲突时运行 `git merge --abort`。锁文件变化时运行 `pnpm --dir <root> install`。通用设置行只在 loopback 上注册；检出缺失或 status 调用失败时这一行仍显示，按钮禁用并说明原因。Electron 优先使用本检出的 `apps/cli/src/bin.ts`，而不是 PATH 上已发布的 `dsh`；只有 `/tinywhale/status` 有应答时才会挂到已经在跑的 Web UI。
 

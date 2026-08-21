@@ -99,7 +99,7 @@ npm install
 npm start
 \`\`\`
 
-若 \`http://127.0.0.1:3080\` 已在提供 Web UI，Electron 壳会直接接入；否则它会启动 \`dsh web\` 并打开窗口。详见 [desktop/README.md](desktop/README.md)。
+若 \`http://127.0.0.1:3080\` 已在提供 Web UI，Electron 壳会直接接入；否则它会启动 \`dsh web\` 并打开窗口。详见 [desktop/README.zh.md](desktop/README.zh.md)。
 
 `,
 }

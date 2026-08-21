@@ -2,7 +2,7 @@
 
 [English](verifier.md) | 中文
 
-验证器能力——一个[能力 seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.md)，用于给候选轨迹排序或比较：Service Definition（[dsh-verifier](../../packages/verifier/verifier)，`ctx.verifier`）、Service Provider（[dsh-verifier-conversation](../../packages/verifier/verifier-conversation)）和 Consumer（[dsh-tool-verifier](../../packages/verifier/tool-verifier)，`verify` 工具）。面向用户的 `/verify` 命令在 [dsh-command-verify](../../packages/verifier/command-verify)。验证器是可选能力，不是 agent-loop 主干的一部分。
+验证器能力——一个[能力 seam](../../.agents/notes/implemented/feature/2026-08-19-llm-as-a-verifier-plugin.zh.md)，用于给候选轨迹排序或比较：Service Definition（[dsh-verifier](../../packages/verifier/verifier)，`ctx.verifier`）、Service Provider（[dsh-verifier-conversation](../../packages/verifier/verifier-conversation)）和 Consumer（[dsh-tool-verifier](../../packages/verifier/tool-verifier)，`verify` 工具）。面向用户的 `/verify` 命令在 [dsh-command-verify](../../packages/verifier/command-verify)。验证器是可选能力，不是 agent-loop 主干的一部分。
 
 来源：[`packages/verifier/verifier/src/types.ts`](../../packages/verifier/verifier/src/types.ts)
 
@@ -73,7 +73,7 @@ interface VerifierCallEventData {
 
 ## Cordis API
 
-Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — this section is byte-identical in both language sides of the page. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.zh.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
 <a id="ctxverifier--verifierruntime"></a>
 
@@ -113,5 +113,5 @@ async select( agent: VerifierContext, request: VerifierSelectRequest, signal?: A
 async compare( agent: VerifierContext, request: VerifierCompareRequest, signal?: AbortSignal, ): Promise<VerifierCompareResult>
 ```
 
-Source: [`packages/verifier/verifier/src/index.ts:106`](../../packages/verifier/verifier/src/index.ts)
+Source: [`packages/verifier/verifier/src/index.ts`](../../packages/verifier/verifier/src/index.ts)
 <!-- END GENERATED cordis-surface -->

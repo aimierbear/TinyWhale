@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-07-19-plugin-command-registration.md
 2026-07-19-plugin-command-registration.md: 6bb1257675a0723085333af929045fb639ffd125
-2026-07-19-plugin-command-registration.zh.md: 6456d979c55d132c564f08a348654c112d3e455b
+2026-07-19-plugin-command-registration.zh.md: 98120ff3f3ad4f4352e7754fa166d293573ff4a7

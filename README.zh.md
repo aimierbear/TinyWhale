@@ -24,19 +24,27 @@ npm install
 npm start
 ```
 
-若 `http://127.0.0.1:3080` 已在提供 Web UI，Electron 壳会直接接入；否则它会启动 `dsh web` 并打开窗口。详见 [desktop/README.md](desktop/README.md)。
+若 `http://127.0.0.1:3080` 已在提供 Web UI，Electron 壳会直接接入；否则它会启动 `dsh web` 并打开窗口。详见 [desktop/README.zh.md](desktop/README.zh.md)。
 
-## 运行 Web UI
+<a id="run"></a>
+
+## 运行
 
 ### 通过 `npm` 运行
+
+安装 `Node.js`，然后运行：
 
 ```sh
 npx @deepseek-ai/dsh web
 ```
 
-该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.md)。
+该命令默认会在 `http://127.0.0.1:3080` 启动 Web UI，本机启动时还会用默认浏览器打开页面。通过 SSH 启动时只打印宿主机 URL，因为本地转发地址由 SSH 客户端或编辑器持有。传入 `--no-open` 可仅运行服务器而不打开浏览器。详见 [Web UI 指南](docs/user/guide/index.zh.md)。
+
+<a id="run-from-source"></a>
 
 ### 从源码运行
+
+如需从仓库源码运行：
 
 ```sh
 git clone https://github.com/aimierbear/TinyWhale.git
@@ -55,11 +63,11 @@ pnpm dsh web
 
 ## 参与贡献
 
-参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+参见 [CONTRIBUTING.md](CONTRIBUTING.zh.md)。
 
 ## 开发
 
-请先阅读[开发指南](docs/development.md)与[架构文档](docs/architecture.md)。
+请先阅读[开发指南](docs/development.zh.md)与[架构文档](docs/architecture.zh.md)。
 
 面向 agent：请遵循 [AGENTS.md](AGENTS.md)。本 fork 的额外约定见 [TINYWHALE.md](TINYWHALE.md)。
 
@@ -67,4 +75,4 @@ pnpm dsh web
 
 [MIT](LICENSE)
 
-上游版权予以保留。归属声明见 [NOTICE](NOTICE)。第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

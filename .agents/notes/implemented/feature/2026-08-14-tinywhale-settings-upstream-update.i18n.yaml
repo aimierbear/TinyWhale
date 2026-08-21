@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-14-tinywhale-settings-upstream-update.md
 2026-08-14-tinywhale-settings-upstream-update.md: 5ed54834d3823721f0ebc22d9ceac10ecf676136
-2026-08-14-tinywhale-settings-upstream-update.zh.md: 3c0e4c4cc6a95485fe55511c2d837eab94e7c8d0
+2026-08-14-tinywhale-settings-upstream-update.zh.md: 590679820bdbac6c2cb0a69df6b975701a1b0b0b

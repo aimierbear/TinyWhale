@@ -12,7 +12,7 @@ TUI 拥有斜杠命令。如果命令名、帮助文本、自动补全、分派�
 
 ## 决策
 
-位于 `packages/interaction/commands/` 的 `@deepseek-ai/dsh-commands` 是产品命令注册表。TUI 应用组合包把它挂载在消费该服务的前端旁；[仅面向自动化的 ACP（Agent Client Protocol）应用](../simplification/2026-07-23-acp-automation-only-protocol.md)和无执行器、无 UI 的 agent spine 都省略该服务。TUI 注入该服务，命令生产者只依赖注册表及其操作的领域。
+位于 `packages/interaction/commands/` 的 `@deepseek-ai/dsh-commands` 是产品命令注册表。TUI 应用组合包把它挂载在消费该服务的前端旁；[仅面向自动化的 ACP（Agent Client Protocol）应用](../simplification/2026-07-23-acp-automation-only-protocol.zh.md)和无执行器、无 UI 的 agent spine 都省略该服务。TUI 注入该服务，命令生产者只依赖注册表及其操作的领域。
 
 ### 注册表约定
 
@@ -30,7 +30,7 @@ TUI 拥有斜杠命令。如果命令名、帮助文本、自动补全、分派�
 
 ### 直接分派与取消
 
-命令在仅面向人类的命令平面中运行。注册表不会把输入转成 `user/message`，输出不会成为会话事件，两者都不会隐式发送给模型。处理器接收对应的同一个目标 agent、原始输入和本次请求持有的 `AbortSignal`；生产者可以通过该 agent 显式调度单独的模型可见工作，随后由生产者负责其日志记录和生命周期约定。信号中止时，注册表不再等待不合作的处理器；处理器仍负责停止已经启动的外部副作用。设置了 `background: true` 且处理器返回 thenable 的定义是例外：`execute` 已经返回准入成功，`command/done` 仍等待该 thenable（[background 准入](../bug-fix/2026-08-20-background-command-admits-before-handler.md)）。
+命令在仅面向人类的命令平面中运行。注册表不会把输入转成 `user/message`，输出不会成为会话事件，两者都不会隐式发送给模型。处理器接收对应的同一个目标 agent、原始输入和本次请求持有的 `AbortSignal`；生产者可以通过该 agent 显式调度单独的模型可见工作，随后由生产者负责其日志记录和生命周期约定。信号中止时，注册表不再等待不合作的处理器；处理器仍负责停止已经启动的外部副作用。设置了 `background: true` 且处理器返回 thenable 的定义是例外：`execute` 已经返回准入成功，`command/done` 仍等待该 thenable（[background 准入](../bug-fix/2026-08-20-background-command-admits-before-handler.zh.md)）。
 
 预期的处理器失败返回 `CommandResult.error`。抛出的异常或格式错误的结果仍是适配器可见的命令失败，而不是模型消息。该边界有意分离 UI 输出与持久领域变更：例如目标命令可以改变 `ctx.goals`，但持久状态由目标服务拥有。
 

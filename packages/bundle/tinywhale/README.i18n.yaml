@@ -3,4 +3,4 @@
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/bundle/tinywhale/README.md
 README.md: 6af2b2ba6ca6887d24121e162f350b10d77665aa
-README.zh.md: caf749187c78a3067fb0813e94bb5a4121f0836b
+README.zh.md: cb5e6cc8a8d57db2cd37e794df7f056164cba85a

@@ -32,6 +32,8 @@ TinyWhale-only trees that upstream should not own. Restored from the pre-merge H
 - `packages/client/ui-settings-update/`
 - `packages/verifier/`
 
+Vendored extras under `packages/bundle/tinywhale/plugins/` stay English-or-upstream copies and are excluded from bilingual pairing.
+
 ### Rebrand (take upstream, restamp TinyWhale)
 
 Root README, `LICENSE`, and `apps/web/index.html` mix harness docs with product name. Freezing them would drop upstream how-to changes (`--no-open`, new sections). The update path takes the merged/upstream file and runs [`src/rebrand.ts`](packages/client/ui-settings-update/src/rebrand.ts): keep unknown headings, rewrite clone URL and community, insert packaged/desktop sections if missing, set the window title.

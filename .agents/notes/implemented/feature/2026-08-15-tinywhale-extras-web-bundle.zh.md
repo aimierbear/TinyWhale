@@ -10,7 +10,7 @@ Status: implemented
 
 ## Decision
 
-[`@deepseek-ai/dsh-tinywhale`](../../../../packages/bundle/tinywhale/README.md) 是一份 patch 列表 extras 组合包。[`PROFILE_TEMPLATES.web`](../../../../packages/boot/app-boot/src/profile.ts) 为 `@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`、`@deepseek-ai/dsh-tinywhale`。`headless` 不挂载它。已经初始化过的 web profile 保留自己存下的组合包列表。
+[`@deepseek-ai/dsh-tinywhale`](../../../../packages/bundle/tinywhale/README.zh.md) 是一份 patch 列表 extras 组合包。[`PROFILE_TEMPLATES.web`](../../../../packages/boot/app-boot/src/profile.ts) 为 `@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app`、`@deepseek-ai/dsh-tinywhale`。`headless` 不挂载它。已经初始化过的 web profile 保留自己存下的组合包列表。
 
 插入行是 fractal、security-codex、dshmarket、`@omdsh-dev/dsh-genui`、`dsh-client-auto-continue`、`dsh-better-sidebar`、`@liustack/modlens`。`dsh-fractal`、`dsh-security-codex` 和 `dsh-better-sidebar` 作为 `file:` 副本放在 [`plugins/`](../../../../packages/bundle/tinywhale/plugins/ORIGIN.md) 下。better-sidebar 副本保留中间栏压缩补丁，并把出厂右侧叶播种为「任务管理」再「资源管理器」；仍只含这两类页签的已持久化出厂叶会在加载时升级。
 

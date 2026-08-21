@@ -105,6 +105,7 @@ describe('rebrandReadme', () => {
     expect(next).toContain('# TinyWhale')
     expect(next).toContain('cd TinyWhale')
     expect(next).toContain('安装打包应用')
+    expect(next).toContain('desktop/README.zh.md')
     expect(next).not.toContain('<table>')
     expect(next).toContain('本仓库 Issues')
     expect(next).toContain('NOTICE')

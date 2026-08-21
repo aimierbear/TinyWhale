@@ -24,7 +24,7 @@
 
 #### What the model sees
 
-生成的[工具目录](../../../docs/tool-catalog.md#verify)以及这段 description：
+生成的[工具目录](../../../docs/tool-catalog.zh.md#verify)以及这段 description：
 
 ##### Verify tool description
 

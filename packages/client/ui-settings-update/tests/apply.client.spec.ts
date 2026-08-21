@@ -19,6 +19,9 @@ async function bench(isLoopback = true) {
   const ctx = new Context()
   await ctx.plugin(SlotRegistry).await()
   const locale = new LocaleRuntime(ctx)
+  // Non-jsdom lanes never see navigator.languages; LocaleRuntime now opens on
+  // English unless the test stages zh explicitly.
+  locale.setLocale('zh')
   ctx.provide('locale', locale)
   const call = vi.fn(async (channel: string, endpoint: string) => {
     expect(channel).toBe(TINYWHALE_UPDATE_CHANNEL)
